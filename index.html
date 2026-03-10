@@ -1,0 +1,1505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>BoardMix — Classic Board Games</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.4.7/peerjs.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;overscroll-behavior:none}
+body{background:#05050e;color:#e8e8f5;font-family:'Outfit',sans-serif;-webkit-tap-highlight-color:transparent;user-select:none}
+button,[onclick]{-webkit-tap-highlight-color:transparent;touch-action:manipulation;cursor:pointer}
+:root{--bg:#05050e;--bg2:#08081a;--card:#0d0d22;--card2:#111130;--border:#18183a;--border2:#22224a;--gold:#c9a84c;--gold2:#f0c060;--gold3:#ffe090;--text:#e8e8f5;--muted:#5a5a90;--dim:#2a2a5a;--red:#e53935;--blue:#2979ff;--green:#00c853;--purple:#7c4dff}
+.screen{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;opacity:0;pointer-events:none;transition:opacity .2s;overflow-y:auto;overflow-x:hidden}
+.screen.active{opacity:1;pointer-events:all}
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* ═══ MENU ═══ */
+#s-menu{background:var(--bg)}
+#s-menu::before{content:'';position:fixed;inset:0;z-index:0;background:radial-gradient(ellipse 70% 50% at 20% 0%,rgba(201,168,76,.06),transparent 60%),radial-gradient(ellipse 60% 50% at 80% 100%,rgba(124,77,255,.05),transparent 60%);pointer-events:none}
+.menu-hero{width:100%;text-align:center;padding:48px 20px 26px;position:relative;z-index:1}
+.menu-badge{display:inline-block;font-size:9px;letter-spacing:.35em;text-transform:uppercase;color:var(--gold);border:1px solid rgba(201,168,76,.25);padding:5px 16px;margin-bottom:16px}
+.menu-title{font-family:'Cinzel',serif;font-size:clamp(56px,13vw,96px);font-weight:900;line-height:.95;background:linear-gradient(135deg,#7a5a1a,#f0c060,#c9a84c,#7a5a1a);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:.04em}
+.menu-sub{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-top:8px}
+.menu-hr{width:54px;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);margin:16px auto 14px}
+.menu-actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;position:relative;z-index:1}
+.btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--muted);padding:7px 16px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;transition:all .15s;font-family:'Outfit',sans-serif}
+.btn-ghost:hover{border-color:var(--gold);color:var(--gold)}
+.game-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;width:100%;max-width:920px;padding:16px 14px 40px;position:relative;z-index:1}
+.game-card{background:var(--card);border:1px solid var(--border);overflow:hidden;cursor:pointer;transition:all .2s;position:relative}
+.game-card:hover{transform:translateY(-4px);border-color:rgba(201,168,76,.4);box-shadow:0 16px 48px rgba(0,0,0,.5)}
+.card-canvas-wrap{height:136px;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.card-ov{position:absolute;inset:0;background:linear-gradient(to bottom,transparent 40%,#0d0d22);pointer-events:none}
+.card-body{padding:14px 18px 18px}
+.card-name{font-family:'Cinzel',serif;font-size:19px;font-weight:700;color:var(--gold2);margin-bottom:4px}
+.card-desc{font-size:12px;color:var(--muted);line-height:1.55;margin-bottom:10px}
+.card-tags{display:flex;gap:6px;flex-wrap:wrap}
+.tag{font-size:9px;letter-spacing:.12em;text-transform:uppercase;border:1px solid var(--border2);color:var(--muted);padding:3px 8px}
+.tag.hi{border-color:rgba(201,168,76,.3);color:var(--gold)}
+
+/* ═══ PROFILE SCREEN ═══ */
+#s-profiles{padding:0;justify-content:flex-start;background:var(--bg)}
+.prof-screen-inner{width:100%;max-width:560px;padding:20px 16px 40px}
+.back-btn{display:inline-flex;align-items:center;gap:6px;background:transparent;border:none;color:var(--muted);font-size:12px;letter-spacing:.1em;text-transform:uppercase;padding:0 0 20px;cursor:pointer;transition:color .15s}
+.back-btn:hover{color:var(--gold)}
+.section-title{font-family:'Cinzel',serif;font-size:22px;font-weight:700;color:var(--gold2);margin-bottom:2px}
+.section-sub{font-size:12px;color:var(--muted);margin-bottom:20px}
+
+/* Active profile card */
+.active-prof-card{background:var(--card);border:1px solid rgba(201,168,76,.3);padding:24px;margin-bottom:16px;position:relative;overflow:hidden}
+.active-prof-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(201,168,76,.06),transparent 60%);pointer-events:none}
+.apc-top{display:flex;align-items:center;gap:18px;margin-bottom:20px}
+.apc-avatar-wrap{position:relative;flex-shrink:0}
+.apc-avatar{font-size:52px;width:72px;height:72px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:var(--bg);border:3px solid transparent;position:relative}
+.apc-ring{position:absolute;inset:-4px;border-radius:50%;border:2px solid var(--gold);opacity:.7;animation:ringpulse 2s ease-in-out infinite}
+@keyframes ringpulse{0%,100%{opacity:.5;transform:scale(1)}50%{opacity:.9;transform:scale(1.04)}}
+.apc-info{flex:1}
+.apc-name{font-family:'Cinzel',serif;font-size:22px;font-weight:700;color:var(--text)}
+.apc-level{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);margin:3px 0}
+.apc-coins{font-family:'Cinzel',serif;font-size:16px;color:var(--gold2)}
+.xp-bar-wrap{margin-bottom:4px}
+.xp-bar-label{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:5px;letter-spacing:.05em}
+.xp-bar{height:5px;background:var(--border);border-radius:3px;overflow:hidden}
+.xp-bar-fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--gold2));transition:width .4s ease;border-radius:3px}
+.apc-game-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:18px}
+.gstat{background:var(--bg);border:1px solid var(--border);padding:12px 10px;text-align:center}
+.gstat-icon{font-size:18px;margin-bottom:4px;display:block}
+.gstat-label{font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.gstat-wr{font-family:'Cinzel',serif;font-size:18px;font-weight:700;color:var(--gold2)}
+.gstat-wl{font-size:10px;color:var(--muted);margin-top:1px}
+.gstat-bar{height:3px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:6px}
+.gstat-bar-fill{height:100%;background:linear-gradient(90deg,var(--green),#69f0ae);transition:width .4s ease;border-radius:2px}
+/* Achievements mini */
+.ach-mini-title{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;margin-top:18px}
+.ach-mini-grid{display:flex;gap:8px;flex-wrap:wrap}
+.ach-chip{background:var(--bg);border:1px solid var(--border2);padding:7px 10px;display:flex;align-items:center;gap:6px;border-radius:2px}
+.ach-chip.unlocked{border-color:rgba(201,168,76,.4);background:rgba(201,168,76,.06)}
+.ach-chip-icon{font-size:16px}
+.ach-chip-name{font-size:10px;color:var(--muted)}
+.ach-chip.unlocked .ach-chip-name{color:var(--gold)}
+.ach-locked-icon{font-size:14px;opacity:.3}
+/* Profile slots */
+.prof-slots-title{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.prof-slots{display:flex;flex-direction:column;gap:8px}
+.prof-slot{background:var(--card);border:1px solid var(--border);padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:all .15s}
+.prof-slot:hover{border-color:rgba(201,168,76,.35);transform:translateX(3px)}
+.prof-slot.sel{border-color:var(--gold);background:rgba(201,168,76,.04)}
+.ps-av{font-size:26px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;background:var(--bg);border-radius:50%}
+.ps-info{flex:1}
+.ps-name{font-family:'Cinzel',serif;font-size:14px;color:var(--text)}
+.ps-meta{font-size:10px;color:var(--muted)}
+.ps-coins{font-size:12px;color:var(--gold)}
+.prof-slot.empty{border-style:dashed;justify-content:center;color:var(--muted);font-size:12px;letter-spacing:.12em;text-transform:uppercase}
+.prof-slot.empty:hover{border-color:var(--gold);color:var(--gold)}
+
+/* ═══ ACHIEVEMENTS SCREEN ═══ */
+#s-achievements{padding:0;justify-content:flex-start;background:var(--bg)}
+.ach-screen-inner{width:100%;max-width:560px;padding:20px 16px 40px}
+.ach-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+.ach-card{background:var(--card);border:1px solid var(--border);padding:14px 12px;text-align:center;transition:all .2s}
+.ach-card.done{border-color:rgba(201,168,76,.35);background:rgba(201,168,76,.04)}
+.ach-card.done:hover{transform:translateY(-2px)}
+.ach-icon{font-size:28px;margin-bottom:8px;display:block;filter:grayscale(1) opacity(.3)}
+.ach-card.done .ach-icon{filter:none}
+.ach-title{font-size:11px;font-weight:600;color:var(--muted);margin-bottom:3px;letter-spacing:.05em}
+.ach-card.done .ach-title{color:var(--gold)}
+.ach-desc{font-size:9px;color:var(--dim);line-height:1.45}
+.ach-card.done .ach-desc{color:var(--muted)}
+
+/* ═══ HISTORY SCREEN ═══ */
+#s-history{padding:0;justify-content:flex-start;background:var(--bg)}
+.hist-inner{width:100%;max-width:600px;padding:20px 16px 40px}
+.hist-hero{background:var(--card);border:1px solid var(--border);padding:20px;margin-bottom:14px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;text-align:center}
+.hh-val{font-family:'Cinzel',serif;font-size:28px;font-weight:700;color:var(--gold2);display:block}
+.hh-lbl{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-top:2px}
+.hist-game-rows{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.hgr{background:var(--card);border:1px solid var(--border);padding:12px;text-align:center}
+.hgr-icon{font-size:22px;margin-bottom:6px;display:block}
+.hgr-name{font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.hgr-wr{font-family:'Cinzel',serif;font-size:20px;color:var(--gold2)}
+.hgr-wl{font-size:10px;color:var(--muted);margin-top:2px}
+.hgr-bar-outer{height:3px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:6px}
+.hgr-bar-inner{height:100%;background:linear-gradient(90deg,var(--green),#69f0ae);border-radius:2px}
+.hist-tabs{display:flex;gap:2px;margin-bottom:10px}
+.htab{background:var(--card);border:1px solid var(--border);color:var(--muted);padding:8px 16px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;transition:all .15s}
+.htab:hover{border-color:var(--border2);color:var(--text)}
+.htab.on{background:rgba(201,168,76,.1);border-color:var(--gold);color:var(--gold)}
+.hist-list{display:flex;flex-direction:column;gap:6px}
+.hi{background:var(--card);border:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;gap:12px;transition:border-color .15s}
+.hi:hover{border-color:var(--border2)}
+.hi-icon{font-size:20px;width:32px;text-align:center;flex-shrink:0}
+.hi-body{flex:1}
+.hi-result{font-size:13px;font-weight:600}
+.hi-result.win{color:var(--gold2)}.hi-result.loss{color:var(--muted)}
+.hi-detail{font-size:10px;color:var(--muted);margin-top:2px}
+.hi-coins{font-family:'Cinzel',serif;font-size:12px;flex-shrink:0}
+.hi-coins.pos{color:var(--green)}.hi-coins.neg{color:var(--red)}
+.hist-empty{text-align:center;color:var(--muted);padding:40px;font-size:14px}
+
+/* ═══ MODE + DIFFICULTY ═══ */
+#s-mode,#s-diff{justify-content:center;padding:20px;background:var(--bg)}
+.mid-wrap{width:100%;max-width:480px}
+.mode-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mode-card{background:var(--card);border:1px solid var(--border);padding:26px 16px;text-align:center;cursor:pointer;transition:all .2s}
+.mode-card:hover{border-color:rgba(201,168,76,.4);transform:translateY(-3px)}
+.mode-card.full{grid-column:1/-1}
+.mc-icon{font-size:32px;margin-bottom:10px;display:block}
+.mc-name{font-family:'Cinzel',serif;font-size:15px;font-weight:600;color:var(--text);margin-bottom:4px}
+.mc-desc{font-size:11px;color:var(--muted);line-height:1.5}
+.diff-grid{display:grid;grid-template-columns:1fr;gap:10px;margin-top:4px}
+.diff-card{background:var(--card);border:1px solid var(--border);padding:20px 22px;display:flex;align-items:center;gap:16px;cursor:pointer;transition:all .2s}
+.diff-card:hover{border-color:rgba(201,168,76,.4);transform:translateX(4px)}
+.diff-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.diff-info{flex:1}
+.diff-name{font-family:'Cinzel',serif;font-size:16px;color:var(--text);margin-bottom:3px}
+.diff-desc{font-size:11px;color:var(--muted)}
+
+/* ═══ LOBBY ═══ */
+#s-lobby{justify-content:center;padding:20px;background:var(--bg)}
+.lobby-wrap{width:100%;max-width:420px}
+.lobby-card{background:var(--card);border:1px solid var(--border);overflow:hidden;margin-bottom:10px}
+.lsec{padding:20px}
+.lsec+.lsec{border-top:1px solid var(--border)}
+.lsec-label{font-size:9px;letter-spacing:.28em;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
+.room-code{font-family:'Cinzel',serif;font-size:38px;font-weight:900;color:var(--gold);letter-spacing:.28em;text-align:center;background:var(--bg);border:1px solid rgba(201,168,76,.18);padding:14px;margin-bottom:8px}
+.ls-status{font-size:11px;text-align:center;color:var(--muted);min-height:16px}
+.ls-status.ok{color:var(--green)}.ls-status.err{color:var(--red)}.ls-status.wait{color:var(--gold)}
+.room-input{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:14px;font-family:'Cinzel',serif;font-size:24px;letter-spacing:.22em;text-align:center;outline:none;text-transform:uppercase;transition:border-color .15s;-webkit-appearance:none;border-radius:0}
+.room-input:focus{border-color:var(--gold)}
+.room-input::placeholder{color:var(--border2)}
+
+/* ═══ GAME SCREEN ═══ */
+#s-game{justify-content:flex-start;overflow:hidden;padding:0;background:var(--bg)}
+.game-hdr{width:100%;flex-shrink:0;background:rgba(5,5,14,.96);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);height:52px;display:flex;align-items:center;gap:8px;padding:0 10px}
+.gh-back{background:transparent;border:none;color:var(--muted);font-size:18px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;transition:color .15s;flex-shrink:0}
+.gh-back:hover{color:var(--text)}
+.gh-name{font-family:'Cinzel',serif;font-size:14px;font-weight:700;color:var(--gold);flex-shrink:0}
+.gh-turn{flex:1;text-align:center;font-size:11px;color:var(--text)}
+.gh-turn b{color:var(--gold2)}
+.gh-info{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.gh-coins{font-size:11px;color:var(--gold)}
+.btn-undo{background:transparent;border:1px solid var(--border);color:var(--muted);padding:4px 10px;font-size:11px;cursor:pointer;display:none;transition:all .15s}
+.btn-undo:hover{border-color:var(--gold);color:var(--gold)}
+.game-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px;width:100%;min-height:0}
+#gameCanvas{display:block;max-width:100%;max-height:100%}
+
+/* Move log */
+#chess-log{display:none;position:absolute;right:0;top:52px;bottom:0;width:110px;background:rgba(5,5,14,.92);border-left:1px solid var(--border);overflow-y:auto;padding:8px}
+.chess-log-title{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.log-move{font-size:11px;color:var(--muted);padding:2px 0;display:flex;gap:4px}
+.log-move .mn{color:var(--dim);width:18px}
+.log-move .mw{color:var(--text)}.log-move .mb{color:var(--muted)}
+
+/* AI thinking */
+.ai-thinking{text-align:center;font-size:11px;color:var(--gold);letter-spacing:.1em;animation:pulse .8s ease-in-out infinite;display:none}
+@keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
+
+/* ═══ LUDO UI (2 dice Nigerian style) ═══ */
+#ludo-ui{display:none;flex-direction:column;align-items:center;gap:8px;padding:4px 0 2px;flex-shrink:0}
+.ludo-dice-row{display:flex;align-items:center;gap:16px}
+.die-wrap{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;transition:transform .15s}
+.die-wrap:hover{transform:scale(1.06)}
+.die-canvas{border-radius:10px;box-shadow:0 4px 18px rgba(0,0,0,.55);transition:all .2s}
+.die-canvas.shaking{animation:shake .55s ease both}
+.die-canvas.active{box-shadow:0 0 0 3px var(--gold),0 4px 18px rgba(0,0,0,.55)}
+.die-canvas.used{opacity:.32}
+@keyframes shake{0%{transform:translate(0,0) rotate(0)}8%{transform:translate(-6px,2px) rotate(-12deg)}17%{transform:translate(6px,-4px) rotate(10deg)}25%{transform:translate(-5px,3px) rotate(-8deg)}33%{transform:translate(5px,-2px) rotate(7deg)}42%{transform:translate(-4px,2px) rotate(-6deg)}50%{transform:translate(4px,-3px) rotate(5deg)}58%{transform:translate(-3px,1px) rotate(-4deg)}67%{transform:translate(3px,-1px) rotate(3deg)}75%{transform:translate(-2px,1px) rotate(-2deg)}83%{transform:translate(2px,0) rotate(1deg)}100%{transform:translate(0,0) rotate(0)}}
+.die-label{font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted)}
+.ludo-mid{display:flex;flex-direction:column;align-items:center;gap:5px}
+#btn-roll{background:linear-gradient(135deg,#b8922a,#e8b840);color:#0a0800;border:none;padding:11px 28px;font-family:'Cinzel',serif;font-size:13px;font-weight:700;letter-spacing:.1em;cursor:pointer;transition:all .15s}
+#btn-roll:hover{background:linear-gradient(135deg,#c9a030,#f0c040)}
+#btn-roll:disabled{opacity:.32;cursor:not-allowed}
+.dice-total{font-family:'Cinzel',serif;font-size:16px;color:var(--gold2);display:none;text-align:center}
+.bonus-banner{font-size:11px;color:var(--green);letter-spacing:.1em;display:none;text-align:center;font-weight:600}
+#ludo-hint{font-size:11px;color:var(--muted);text-align:center;min-height:14px}
+.fair-badge{font-size:9px;color:var(--dim);letter-spacing:.08em;text-align:center}
+
+/* ═══ MODALS ═══ */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:200;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.show{display:flex}
+.modal-box{background:var(--card);border:1px solid var(--border2);padding:30px;width:100%;max-width:380px;text-align:center}
+.modal-ttl{font-family:'Cinzel',serif;font-size:19px;color:var(--gold2);margin-bottom:16px}
+/* Create profile */
+.av-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:18px}
+.av-opt{font-size:22px;padding:6px;cursor:pointer;border:2px solid transparent;border-radius:6px;transition:all .12s}
+.av-opt:hover{border-color:var(--border2)}
+.av-opt.sel{border-color:var(--gold);background:rgba(201,168,76,.1)}
+.name-input{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:12px;font-family:'Outfit',sans-serif;font-size:15px;text-align:center;outline:none;border-radius:0;-webkit-appearance:none;margin-bottom:12px;transition:border-color .15s}
+.name-input:focus{border-color:var(--gold)}
+.name-input::placeholder{color:var(--muted)}
+/* Bet */
+.bet-info{font-size:12px;color:var(--muted);line-height:1.65;margin-bottom:16px}
+.bet-info b{color:var(--gold2)}
+.bet-opts{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:10px}
+.bet-opt{background:var(--bg);border:1px solid var(--border);color:var(--text);padding:12px;font-family:'Cinzel',serif;font-size:14px;cursor:pointer;transition:all .12s}
+.bet-opt:hover,.bet-opt.sel{border-color:var(--gold);background:rgba(201,168,76,.08);color:var(--gold)}
+.bet-skip{width:100%;background:transparent;border:1px solid var(--border);color:var(--muted);padding:12px;font-size:12px;cursor:pointer;margin-top:4px;transition:all .15s}
+.bet-skip:hover{border-color:var(--muted);color:var(--text)}
+/* Quit */
+.quit-warn{font-size:12px;color:var(--muted);line-height:1.65;margin-bottom:20px}
+.quit-warn b{color:var(--red)}
+.quit-btns{display:flex;gap:10px;justify-content:center}
+.btn-danger{background:var(--red);color:#fff;border:none;padding:12px 26px;font-family:'Cinzel',serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s}
+.btn-danger:hover{background:#c62828}
+.btn-mild{background:transparent;border:1px solid var(--border2);color:var(--muted);padding:12px 22px;font-size:12px;cursor:pointer;transition:all .15s}
+.btn-mild:hover{border-color:var(--muted);color:var(--text)}
+/* Promo */
+.prom-grid{display:flex;gap:8px;justify-content:center}
+.prom-btn{background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:12px 14px;font-size:28px;cursor:pointer;transition:all .15s;flex:1}
+.prom-btn:hover{border-color:var(--gold)}
+/* Big gold btn */
+.btn-gold{width:100%;background:linear-gradient(135deg,#b8922a,#e8b840);color:#0a0800;border:none;padding:14px;font-family:'Cinzel',serif;font-size:14px;font-weight:700;letter-spacing:.1em;cursor:pointer;transition:all .15s}
+.btn-gold:hover{background:linear-gradient(135deg,#c9a030,#f0c040)}
+.btn-gold:disabled{opacity:.35;cursor:not-allowed}
+.modal-cancel{width:100%;background:transparent;border:none;color:var(--muted);font-size:12px;cursor:pointer;padding:10px;margin-top:4px;transition:color .15s}
+.modal-cancel:hover{color:var(--text)}
+
+/* ═══ WIN SCREEN ═══ */
+#s-win{position:fixed;inset:0;z-index:300;background:var(--bg);display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px;overflow:hidden}
+#s-win.show{display:flex}
+#confetti-canvas{position:absolute;inset:0;pointer-events:none}
+.win-glow{position:absolute;width:380px;height:380px;background:radial-gradient(circle,rgba(201,168,76,.14),transparent 70%);border-radius:50%;top:50%;left:50%;transform:translate(-50%,-50%);animation:glowpulse 2s ease-in-out infinite;pointer-events:none}
+@keyframes glowpulse{0%,100%{opacity:.6;transform:translate(-50%,-50%) scale(1)}50%{opacity:1;transform:translate(-50%,-50%) scale(1.18)}}
+.win-inner{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;text-align:center;width:100%;max-width:440px}
+.win-badge{display:inline-block;font-size:9px;letter-spacing:.3em;text-transform:uppercase;color:var(--muted);border:1px solid var(--border2);padding:5px 14px;margin-bottom:20px}
+.win-trophy{font-size:72px;line-height:1;animation:trophypop .6s cubic-bezier(.17,.67,.3,1.4) both;margin-bottom:6px}
+@keyframes trophypop{from{transform:scale(0) rotate(-20deg);opacity:0}to{transform:scale(1) rotate(0);opacity:1}}
+.win-crown{font-family:'Cinzel',serif;font-size:clamp(32px,8vw,56px);font-weight:900;background:linear-gradient(135deg,#9a7a2a,#f0c060,#c9a84c);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:fadeup .5s .2s both;letter-spacing:.04em}
+.win-player{font-family:'Cinzel',serif;font-size:clamp(18px,4vw,26px);color:var(--text);animation:fadeup .5s .3s both;margin-top:4px}
+.win-how{font-size:13px;color:var(--muted);animation:fadeup .5s .35s both;margin-top:3px}
+.win-div{width:70px;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);margin:16px auto;animation:fadeup .5s .38s both}
+.win-coins-row{font-family:'Cinzel',serif;font-size:20px;color:var(--green);animation:fadeup .5s .4s both;margin-bottom:3px}
+.win-xp-row{font-size:11px;color:var(--muted);animation:fadeup .5s .42s both}
+.win-streak-row{font-size:24px;animation:fadeup .5s .44s both;margin-bottom:3px;display:none}
+.win-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;animation:fadeup .5s .5s both;margin-top:20px}
+@keyframes fadeup{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.btn-play-again{background:linear-gradient(135deg,#b8922a,#e8b840);color:#0a0800;border:none;padding:14px 32px;font-family:'Cinzel',serif;font-size:13px;font-weight:700;letter-spacing:.1em;cursor:pointer;transition:all .15s}
+.btn-play-again:hover{background:linear-gradient(135deg,#c9a030,#f0c040);transform:translateY(-1px)}
+.btn-menu-win{background:transparent;border:1px solid var(--border2);color:var(--muted);padding:14px 22px;font-size:12px;cursor:pointer;transition:all .15s}
+.btn-menu-win:hover{border-color:var(--muted);color:var(--text)}
+
+/* ═══ UTIL ═══ */
+.dot-pulse::after{content:'...';animation:dotpulse 1.2s infinite steps(4);display:inline-block}
+@keyframes dotpulse{0%{content:''}25%{content:'.'}50%{content:'..'}75%,100%{content:'...'}}
+@media(max-width:480px){.mode-grid{grid-template-columns:1fr}.win-actions{flex-direction:column}.game-grid{grid-template-columns:1fr}.apc-game-stats{grid-template-columns:repeat(3,1fr)}}
+</style>
+</head>
+<body>
+
+<!-- MENU -->
+<div id="s-menu" class="screen active">
+  <div class="menu-hero">
+    <div class="menu-badge">Premium Board Games</div>
+    <h1 class="menu-title">BoardMix</h1>
+    <p class="menu-sub">Local · AI · Online Multiplayer</p>
+    <div class="menu-hr"></div>
+    <div class="menu-actions">
+      <button class="btn-ghost" onclick="showProfiles()">👤 Profiles</button>
+      <button class="btn-ghost" onclick="show('s-history');renderHistory()">📊 History</button>
+      <button class="btn-ghost" onclick="show('s-achievements');renderAchievements()">🏅 Trophies</button>
+    </div>
+  </div>
+  <div class="game-grid" id="gameGrid"></div>
+</div>
+
+<!-- PROFILES -->
+<div id="s-profiles" class="screen">
+  <div class="prof-screen-inner">
+    <button class="back-btn" onclick="show('s-menu')">← Back</button>
+    <div class="section-title">Profiles</div>
+    <div class="section-sub">Your stats, achievements &amp; coins</div>
+    <div id="profActiveCard"></div>
+    <div class="prof-slots-title">All Profiles</div>
+    <div class="prof-slots" id="profSlots"></div>
+  </div>
+</div>
+
+<!-- ACHIEVEMENTS -->
+<div id="s-achievements" class="screen">
+  <div class="ach-screen-inner">
+    <button class="back-btn" onclick="show('s-menu')">← Back</button>
+    <div class="section-title">Achievements</div>
+    <div class="section-sub" id="achSubtitle">0 / 20 unlocked</div>
+    <div class="ach-grid" id="achGrid"></div>
+  </div>
+</div>
+
+<!-- HISTORY -->
+<div id="s-history" class="screen">
+  <div class="hist-inner">
+    <button class="back-btn" onclick="show('s-menu')">← Back</button>
+    <div class="section-title">History</div>
+    <div class="section-sub" style="margin-bottom:16px">Your record across all games</div>
+    <div class="hist-hero" id="histHero"></div>
+    <div class="hist-game-rows" id="histGameRows"></div>
+    <div class="hist-tabs">
+      <div class="htab on" onclick="switchHistTab('all',this)">All</div>
+      <div class="htab" onclick="switchHistTab('chess',this)">♟ Chess</div>
+      <div class="htab" onclick="switchHistTab('checkers',this)">⬤ Checkers</div>
+      <div class="htab" onclick="switchHistTab('ludo',this)">🎲 Ludo</div>
+    </div>
+    <div class="hist-list" id="histList"></div>
+  </div>
+</div>
+
+<!-- MODE SELECT -->
+<div id="s-mode" class="screen">
+  <div class="mid-wrap">
+    <button class="back-btn" onclick="show('s-menu')">← Back</button>
+    <div class="section-title" id="modeTitle">Chess</div>
+    <div class="section-sub">Choose how to play</div>
+    <div class="mode-grid">
+      <div class="mode-card" onclick="pickMode('local')"><span class="mc-icon">📱</span><div class="mc-name">Local</div><div class="mc-desc">Same device, pass &amp; play</div></div>
+      <div class="mode-card" onclick="pickMode('ai')"><span class="mc-icon">🤖</span><div class="mc-name">vs Computer</div><div class="mc-desc">Play against AI</div></div>
+      <div class="mode-card full" onclick="pickMode('online')"><span class="mc-icon">🌐</span><div class="mc-name">Online</div><div class="mc-desc">Invite a friend via room code</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- AI DIFFICULTY -->
+<div id="s-diff" class="screen">
+  <div class="mid-wrap">
+    <button class="back-btn" onclick="show('s-mode')">← Back</button>
+    <div class="section-title">Difficulty</div>
+    <div class="section-sub">Choose your challenge</div>
+    <div class="diff-grid">
+      <div class="diff-card" onclick="pickDiff('easy')"><div class="diff-dot" style="background:#00c853"></div><div class="diff-info"><div class="diff-name">Easy 🟢</div><div class="diff-desc">For beginners — AI plays casually</div></div></div>
+      <div class="diff-card" onclick="pickDiff('medium')"><div class="diff-dot" style="background:#f9a825"></div><div class="diff-info"><div class="diff-name">Medium 🟡</div><div class="diff-desc">Competitive — AI thinks ahead</div></div></div>
+      <div class="diff-card" onclick="pickDiff('hard')"><div class="diff-dot" style="background:#e53935"></div><div class="diff-info"><div class="diff-name">Hard 🔴</div><div class="diff-desc">Brutal — AI plays near-optimal</div></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- LUDO PLAYER COUNT -->
+<div id="s-ludo-count" class="screen">
+  <div class="mid-wrap">
+    <button class="back-btn" onclick="show('s-mode')">← Back</button>
+    <div class="section-title">Ludo Players</div>
+    <div class="section-sub">How many players?</div>
+    <div class="mode-grid">
+      <div class="mode-card" onclick="pickLudoCount(2)">
+        <span class="mc-icon">👥</span>
+        <div class="mc-name">2 Players</div>
+        <div class="mc-desc">Red vs Blue — fast &amp; intense</div>
+      </div>
+      <div class="mode-card" onclick="pickLudoCount(4)">
+        <span class="mc-icon">👨‍👩‍👧‍👦</span>
+        <div class="mc-name">4 Players</div>
+        <div class="mc-desc">Red · Blue · Green · Yellow</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LOBBY -->
+<div id="s-lobby" class="screen">
+  <div class="lobby-wrap">
+    <button class="back-btn" onclick="leaveLobby()">← Back</button>
+    <div class="section-title">Online Lobby</div>
+    <div class="section-sub" style="margin-bottom:16px">Share code or enter friend's code</div>
+    <div class="lobby-card">
+      <div class="lsec">
+        <div class="lsec-label">Your Room Code</div>
+        <div class="room-code" id="roomCode">· · · · · ·</div>
+        <div class="ls-status wait dot-pulse" id="hostSt">Connecting</div>
+      </div>
+      <div class="lsec">
+        <div class="lsec-label">Join a Game</div>
+        <input class="room-input" id="joinInput" maxlength="6" placeholder="XXXXXX" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')">
+        <button class="btn-gold" id="btnJoin" onclick="joinRoom()" style="margin-top:10px">Join Game</button>
+        <div class="ls-status" id="joinSt" style="margin-top:10px"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- GAME -->
+<div id="s-game" class="screen">
+  <div class="game-hdr">
+    <button class="gh-back" onclick="askQuit()">←</button>
+    <div class="gh-name" id="ghName">Chess</div>
+    <div class="gh-turn" id="ghTurn"></div>
+    <div class="gh-info">
+      <div class="gh-coins" id="ghCoins"></div>
+      <button class="btn-undo" id="btnUndo" onclick="doUndo()">↩ Undo</button>
+    </div>
+  </div>
+  <div class="game-body" style="position:relative">
+    <div class="ai-thinking" id="aiThinking">🤖 AI thinking<span class="dot-pulse"></span></div>
+    <canvas id="gameCanvas"></canvas>
+    <div id="ludo-ui">
+      <div class="ludo-dice-row">
+        <div class="die-wrap" id="dieWrap1" onclick="selectDie(0)">
+          <canvas class="die-canvas" id="die1" width="60" height="60"></canvas>
+          <div class="die-label">Die 1</div>
+        </div>
+        <div class="ludo-mid">
+          <button id="btn-roll" onclick="ldRoll()">🎲 Roll</button>
+          <div class="dice-total" id="diceTotal"></div>
+          <div class="bonus-banner" id="bonusBanner"></div>
+        </div>
+        <div class="die-wrap" id="dieWrap2" onclick="selectDie(1)">
+          <canvas class="die-canvas" id="die2" width="60" height="60"></canvas>
+          <div class="die-label">Die 2</div>
+        </div>
+      </div>
+      <div id="ludo-hint"></div>
+      <div class="fair-badge">🔒 Provably fair dice · RNG seeded</div>
+    </div>
+    <div id="chess-log"><div class="chess-log-title">Moves</div><div id="chessLogList"></div></div>
+  </div>
+</div>
+
+<!-- WIN -->
+<div id="s-win">
+  <canvas id="confetti-canvas"></canvas>
+  <div class="win-glow"></div>
+  <div class="win-inner">
+    <div class="win-badge" id="winBadge">Chess</div>
+    <div class="win-trophy" id="winTrophy">🏆</div>
+    <div class="win-crown">Victory!</div>
+    <div class="win-player" id="winPlayer">White Wins!</div>
+    <div class="win-how" id="winHow">By Checkmate</div>
+    <div class="win-div"></div>
+    <div class="win-coins-row" id="winCoins" style="display:none"></div>
+    <div class="win-xp-row" id="winXp" style="display:none"></div>
+    <div class="win-streak-row" id="winStreak"></div>
+    <div class="win-actions">
+      <button class="btn-play-again" onclick="playAgain()">▶ Play Again</button>
+      <button class="btn-menu-win" onclick="goMenu()">Main Menu</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="m-profile">
+  <div class="modal-box">
+    <div class="modal-ttl">Create Profile</div>
+    <div class="av-grid" id="avGrid"></div>
+    <input class="name-input" id="profNameInput" placeholder="Your name" maxlength="14">
+    <button class="btn-gold" onclick="saveProfile()">Create Profile</button>
+    <button class="modal-cancel" onclick="closeModal('m-profile')">Cancel</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="m-bet">
+  <div class="modal-box">
+    <div class="modal-ttl">💰 Place Bet</div>
+    <div class="bet-info" id="betInfo">Wager coins on this game. Winner takes the pot!</div>
+    <div class="bet-opts">
+      <div class="bet-opt" onclick="selBet(50)">50 🪙</div>
+      <div class="bet-opt" onclick="selBet(100)">100 🪙</div>
+      <div class="bet-opt" onclick="selBet(250)">250 🪙</div>
+      <div class="bet-opt" onclick="selBet(500)">500 🪙</div>
+    </div>
+    <button class="btn-gold" onclick="confirmBet()">Lock It In 🔒</button>
+    <button class="bet-skip" onclick="skipBet()">Play for Free</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="m-quit">
+  <div class="modal-box">
+    <div class="modal-ttl" style="color:var(--red)">⚠️ Quit Game?</div>
+    <div class="quit-warn" id="quitWarn"></div>
+    <div class="quit-btns">
+      <button class="btn-danger" onclick="confirmQuit()">Yes, Quit</button>
+      <button class="btn-mild" onclick="closeModal('m-quit')">Keep Playing</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="m-prom">
+  <div class="modal-box">
+    <div class="modal-ttl">Promote Pawn</div>
+    <div class="prom-grid">
+      <button class="prom-btn" id="pq" onclick="doPromo('Q')">♛</button>
+      <button class="prom-btn" id="pr" onclick="doPromo('R')">♜</button>
+      <button class="prom-btn" id="pb" onclick="doPromo('B')">♝</button>
+      <button class="prom-btn" id="pn" onclick="doPromo('N')">♞</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+// ════════════════════════════════════════════════
+//  STORAGE
+// ════════════════════════════════════════════════
+const AVATARS=['😎','🦁','🐯','🦊','🐺','🦅','👑','🎭','🔥','⚡','🌊','🎯','🗡️','🛡️','💎','🌙','☀️','🎲','♟️','🎮','🦄','🐉'];
+const LEVELS=['Rookie','Challenger','Veteran','Expert','Master','Legend','Grandmaster'];
+const XP_PER_LEVEL=500;
+function lvInfo(xp){const lv=Math.min(Math.floor(xp/XP_PER_LEVEL),LEVELS.length-1);return{lv,name:LEVELS[lv],prog:(xp%XP_PER_LEVEL)/XP_PER_LEVEL};}
+const ls=(k,fb)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):fb;}catch{return fb;}};
+const lsw=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch{}};
+let profiles=ls('bm_profiles',[]);
+let history=ls('bm_history',[]);
+let achievements=ls('bm_ach',{});
+let curProfId=ls('bm_cur',null);
+const cp=()=>profiles.find(p=>p.id===curProfId)||null;
+function mkProfile(name,avatar){
+  const p={id:Date.now().toString(),name,avatar,coins:1000,xp:0,streak:0,lastLogin:0,stats:{chess:{w:0,l:0},checkers:{w:0,l:0},ludo:{w:0,l:0}},captureCount:0};
+  profiles.push(p);lsw('bm_profiles',profiles);curProfId=p.id;lsw('bm_cur',curProfId);return p;
+}
+
+// ════════════════════════════════════════════════
+//  ACHIEVEMENTS
+// ════════════════════════════════════════════════
+const ACHS=[
+  {id:'first_win',icon:'🏆',name:'First Victory',desc:'Win your first game'},
+  {id:'on_fire',icon:'🔥',name:'On Fire',desc:'3-game win streak'},
+  {id:'hot',icon:'🌋',name:'Unstoppable',desc:'5-game win streak'},
+  {id:'chess_10',icon:'♟️',name:'Chess Master',desc:'Win 10 chess games'},
+  {id:'ck_10',icon:'👑',name:'Checker King',desc:'Win 10 checkers games'},
+  {id:'ludo_10',icon:'🎲',name:'Ludo Champion',desc:'Win 10 ludo games'},
+  {id:'all_three',icon:'🌟',name:'All-Rounder',desc:'Win all 3 game types'},
+  {id:'high_roller',icon:'💰',name:'High Roller',desc:'Win a 500-coin bet'},
+  {id:'millionaire',icon:'💎',name:'Big Money',desc:'Hold 5000+ coins'},
+  {id:'double6',icon:'🎰',name:'Lucky Six',desc:'Roll double 6s in Ludo'},
+  {id:'killer',icon:'☠️',name:'Assassin',desc:'Capture 5 tokens in Ludo'},
+  {id:'ai_easy',icon:'🤖',name:'Machine Breaker',desc:'Beat Easy AI'},
+  {id:'ai_hard',icon:'🦾',name:'AI Slayer',desc:'Beat Hard AI'},
+  {id:'comeback',icon:'🔄',name:'Comeback Kid',desc:'Win after 2 straight losses'},
+  {id:'grandmaster',icon:'🎖️',name:'Grandmaster',desc:'Reach Grandmaster level'},
+  {id:'daily',icon:'📅',name:'Daily Player',desc:'Log in 7 days straight'},
+  {id:'night_owl',icon:'🌙',name:'Night Owl',desc:'Play after midnight'},
+  {id:'rich',icon:'🏦',name:'Banker',desc:'Win 5 coin bets'},
+  {id:'flawless',icon:'✨',name:'Flawless',desc:'Win checkers without losing a piece'},
+  {id:'quick',icon:'⚡',name:'Speed Demon',desc:'Win a local game quickly'}
+];
+function unlockAch(id){
+  if(achievements[id])return false;
+  achievements[id]=Date.now();lsw('bm_ach',achievements);
+  return true;
+}
+function checkAchs(){
+  const p=cp();if(!p)return;
+  const all=Object.values(p.stats);
+  const tw=all.reduce((s,g)=>s+g.w,0);
+  if(tw>=1)unlockAch('first_win');
+  if(p.streak>=3)unlockAch('on_fire');
+  if(p.streak>=5)unlockAch('hot');
+  if(p.stats.chess.w>=10)unlockAch('chess_10');
+  if(p.stats.checkers.w>=10)unlockAch('ck_10');
+  if(p.stats.ludo.w>=10)unlockAch('ludo_10');
+  if(p.stats.chess.w>0&&p.stats.checkers.w>0&&p.stats.ludo.w>0)unlockAch('all_three');
+  if(p.coins>=5000)unlockAch('millionaire');
+  if(lvInfo(p.xp).lv>=6)unlockAch('grandmaster');
+  const h=new Date().getHours();if(h>=0&&h<5)unlockAch('night_owl');
+  const losses=history.filter(h2=>h2.profileId===p.id&&h2.result==='loss').slice(0,2);
+  if(losses.length>=2&&history.find(h2=>h2.profileId===p.id&&h2.result==='win'))unlockAch('comeback');
+}
+
+// Daily bonus
+function checkDailyBonus(){
+  const p=cp();if(!p)return;
+  const now=Date.now();const last=p.lastLogin||0;
+  const dayMs=86400000;
+  if(now-last>dayMs){p.coins+=100;p.lastLogin=now;lsw('bm_profiles',profiles);}
+}
+
+// ════════════════════════════════════════════════
+//  AUDIO
+// ════════════════════════════════════════════════
+let _ctx=null;
+const ac=()=>{if(!_ctx)_ctx=new(window.AudioContext||window.webkitAudioContext)();return _ctx;};
+function snd(type){
+  try{const c=ac();
+    if(type==='dice'){for(let b=0;b<4;b++){const sz=Math.floor(c.sampleRate*.05);const buf=c.createBuffer(1,sz,c.sampleRate);const d=buf.getChannelData(0);for(let i=0;i<sz;i++)d[i]=(Math.random()*2-1)*.5;const src=c.createBufferSource();src.buffer=buf;const g=c.createGain();const f=c.createBiquadFilter();f.type='highpass';f.frequency.value=1000;const delay=b*.07;g.gain.setValueAtTime(.35,c.currentTime+delay);g.gain.exponentialRampToValueAtTime(.001,c.currentTime+delay+.07);src.connect(f);f.connect(g);g.connect(c.destination);src.start(c.currentTime+delay);}}
+    else if(type==='land'){const o=c.createOscillator();const g=c.createGain();o.type='square';o.frequency.setValueAtTime(160,c.currentTime);o.frequency.exponentialRampToValueAtTime(70,c.currentTime+.12);g.gain.setValueAtTime(.3,c.currentTime);g.gain.exponentialRampToValueAtTime(.001,c.currentTime+.15);o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+.15);}
+    else if(type==='move'){const o=c.createOscillator();const g=c.createGain();o.type='sine';o.frequency.setValueAtTime(440,c.currentTime);o.frequency.exponentialRampToValueAtTime(660,c.currentTime+.07);g.gain.setValueAtTime(.18,c.currentTime);g.gain.exponentialRampToValueAtTime(.001,c.currentTime+.09);o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+.1);}
+    else if(type==='capture'){[240,180,130].forEach((f,i)=>{const o=c.createOscillator();const g=c.createGain();o.type='sawtooth';o.frequency.value=f;g.gain.setValueAtTime(.28,c.currentTime+i*.04);g.gain.exponentialRampToValueAtTime(.001,c.currentTime+i*.04+.1);o.connect(g);g.connect(c.destination);o.start(c.currentTime+i*.04);o.stop(c.currentTime+i*.04+.12);});}
+    else if(type==='win'){[523,659,784,1047].forEach((f,i)=>{const o=c.createOscillator();const g=c.createGain();o.type='triangle';o.frequency.value=f;g.gain.setValueAtTime(.25,c.currentTime+i*.12);g.gain.exponentialRampToValueAtTime(.001,c.currentTime+i*.12+.28);o.connect(g);g.connect(c.destination);o.start(c.currentTime+i*.12);o.stop(c.currentTime+i*.12+.3);});}
+    else if(type==='d6'){[523,659,784,1047,1319,1568].forEach((f,i)=>{const o=c.createOscillator();const g=c.createGain();o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(.22,c.currentTime+i*.09);g.gain.exponentialRampToValueAtTime(.001,c.currentTime+i*.09+.28);o.connect(g);g.connect(c.destination);o.start(c.currentTime+i*.09);o.stop(c.currentTime+i*.09+.32);});}
+    else if(type==='bonus'){const o=c.createOscillator();const g=c.createGain();o.type='sine';o.frequency.setValueAtTime(800,c.currentTime);o.frequency.exponentialRampToValueAtTime(1200,c.currentTime+.15);g.gain.setValueAtTime(.2,c.currentTime);g.gain.exponentialRampToValueAtTime(.001,c.currentTime+.2);o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+.22);}
+  }catch(e){}
+}
+
+// ════════════════════════════════════════════════
+//  DICE CANVAS
+// ════════════════════════════════════════════════
+const DOT_POS={1:[[.5,.5]],2:[[.28,.28],[.72,.72]],3:[[.28,.28],[.5,.5],[.72,.72]],4:[[.28,.28],[.72,.28],[.28,.72],[.72,.72]],5:[[.28,.28],[.72,.28],[.5,.5],[.28,.72],[.72,.72]],6:[[.28,.28],[.72,.28],[.28,.5],[.72,.5],[.28,.72],[.72,.72]]};
+function drawDie(id,val,gold=false,used=false){
+  const c=document.getElementById(id);if(!c)return;
+  const ctx=c.getContext('2d');const sz=c.width;
+  ctx.clearRect(0,0,sz,sz);
+  const r=10;
+  ctx.beginPath();ctx.moveTo(r,0);ctx.arcTo(sz,0,sz,sz,r);ctx.arcTo(sz,sz,0,sz,r);ctx.arcTo(0,sz,0,0,r);ctx.arcTo(0,0,sz,0,r);ctx.closePath();
+  const g=ctx.createLinearGradient(0,0,sz,sz);
+  if(gold){g.addColorStop(0,'#3a2800');g.addColorStop(1,'#1a1200');}
+  else{g.addColorStop(0,'#1a1a3e');g.addColorStop(1,'#0d0d20');}
+  ctx.fillStyle=g;ctx.fill();
+  ctx.strokeStyle=gold?'rgba(201,168,76,.7)':'rgba(80,80,180,.35)';ctx.lineWidth=used?1:2;ctx.stroke();
+  if(val>=1&&val<=6){
+    const dc=gold?'#f0c060':'#e0e0ff';
+    ctx.shadowColor=dc;ctx.shadowBlur=used?3:8;
+    ctx.fillStyle=dc;
+    DOT_POS[val].forEach(([dx,dy])=>{ctx.beginPath();ctx.arc(dx*sz,dy*sz,sz*.09,0,Math.PI*2);ctx.fill();});
+    ctx.shadowBlur=0;
+  }
+}
+function initDice(){drawDie('die1',1);drawDie('die2',1);}
+
+// ════════════════════════════════════════════════
+//  APP STATE
+// ════════════════════════════════════════════════
+let G={game:'chess',mode:'local',role:'host',aiDiff:'medium',peer:null,conn:null,wager:0};
+let _confettiAnim=null;
+
+// ════════════════════════════════════════════════
+//  NAVIGATION
+// ════════════════════════════════════════════════
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
+function openModal(id){document.getElementById(id).classList.add('show')}
+function closeModal(id){document.getElementById(id).classList.remove('show')}
+function showProfiles(){renderProfiles();show('s-profiles');}
+function pickGame(name){G.game=name;document.getElementById('modeTitle').textContent={chess:'Chess',checkers:'Checkers',ludo:'Ludo'}[name];show('s-mode');}
+function pickMode(m){
+  G.mode=m;
+  if(m==='ai') show('s-diff');
+  else if(m==='online'){show('s-lobby');initLobby();}
+  else if(m==='local'&&G.game==='ludo') show('s-ludo-count');
+  else showBetModal();
+}
+function pickLudoCount(n){G.ludoCount=n;showBetModal();}
+function pickDiff(d){G.aiDiff=d;showBetModal();}
+function setTurn(h){document.getElementById('ghTurn').innerHTML=h;}
+function updateCoins(){const p=cp();document.getElementById('ghCoins').textContent=p?p.coins.toLocaleString()+'🪙':'';}
+
+// ─── BET ───
+let _pendingBet=0;
+function showBetModal(){
+  const p=cp();G.wager=0;_pendingBet=0;
+  document.querySelectorAll('.bet-opt').forEach(b=>b.classList.remove('sel'));
+  if(p){document.getElementById('betInfo').innerHTML=`Balance: <b>${p.coins.toLocaleString()} 🪙</b><br>Wager coins — winner takes the pot!`;openModal('m-bet');}
+  else launchGame();
+}
+function selBet(amt){const p=cp();if(!p)return;if(amt>p.coins){alert(`Not enough coins!`);return;}_pendingBet=amt;document.querySelectorAll('.bet-opt').forEach(b=>{b.classList.toggle('sel',b.textContent.includes(String(amt)));});}
+function confirmBet(){G.wager=_pendingBet;closeModal('m-bet');launchGame();}
+function skipBet(){G.wager=0;closeModal('m-bet');launchGame();}
+
+// ─── QUIT ───
+function askQuit(){
+  const warn=G.wager>0?`Are you sure? <b>You'll forfeit and lose ${G.wager} 🪙</b>.`:`Are you sure? <b>This game will end as a forfeit.</b>`;
+  document.getElementById('quitWarn').innerHTML=warn;openModal('m-quit');
+}
+function confirmQuit(){
+  closeModal('m-quit');
+  const p=cp();if(p){p.stats[G.game].l++;p.coins=Math.max(0,p.coins-G.wager);p.streak=0;lsw('bm_profiles',profiles);addHistory({game:G.game,result:'loss',how:'Forfeit',coins:-G.wager,profileId:p.id,date:Date.now()});}
+  goMenu();
+}
+function goMenu(){cleanPeer();hideWin();closeModal('m-quit');document.getElementById('ludo-ui').style.display='none';document.getElementById('chess-log').style.display='none';document.getElementById('btnUndo').style.display='none';const ov=document.getElementById('net-wait-ov');if(ov)ov.style.display='none';show('s-menu');}
+
+// ─── HISTORY ───
+function addHistory(e){history.unshift(e);if(history.length>200)history=history.slice(0,200);lsw('bm_history',history);}
+let _htab='all';
+function switchHistTab(t,el){_htab=t;document.querySelectorAll('.htab').forEach(x=>x.classList.remove('on'));el.classList.add('on');renderHistory();}
+function renderHistory(){
+  const p=cp();
+  const hero=document.getElementById('histHero');
+  const tot=(g)=>g.w+g.l;const wr=(g)=>tot(g)>0?Math.round(g.w/tot(g)*100):0;
+  if(p){
+    const all={w:Object.values(p.stats).reduce((s,g)=>s+g.w,0),l:Object.values(p.stats).reduce((s,g)=>s+g.l,0)};
+    const allWR=tot(all)>0?Math.round(all.w/tot(all)*100):0;
+    hero.innerHTML=`<div><span class="hh-val">🏆 ${all.w}</span><div class="hh-lbl">Wins</div></div><div><span class="hh-val">${allWR}%</span><div class="hh-lbl">Win Rate</div></div><div><span class="hh-val">🔥 ${p.streak}</span><div class="hh-lbl">Streak</div></div>`;
+    const gr=document.getElementById('histGameRows');
+    gr.innerHTML=[['chess','♟️','Chess'],['checkers','⬤','Checkers'],['ludo','🎲','Ludo']].map(([gk,icon,nm])=>{const gs=p.stats[gk];const gwr=wr(gs);return`<div class="hgr"><span class="hgr-icon">${icon}</span><div class="hgr-name">${nm}</div><div class="hgr-wr">${gwr}%</div><div class="hgr-wl">${gs.w}W ${gs.l}L</div><div class="hgr-bar-outer"><div class="hgr-bar-inner" style="width:${gwr}%"></div></div></div>`;}).join('');
+  } else {hero.innerHTML='<div style="grid-column:1/-1;color:var(--muted);font-size:13px;padding:20px">Create a profile to track stats</div>';}
+  const list=document.getElementById('histList');
+  const mine=history.filter(h=>!p||h.profileId===p.id||!h.profileId);
+  const filtered=_htab==='all'?mine:mine.filter(h=>h.game===_htab);
+  const icons={chess:'♟️',checkers:'⬤',ludo:'🎲'};
+  if(!filtered.length){list.innerHTML='<div class="hist-empty">No games yet — start playing!</div>';return;}
+  list.innerHTML=filtered.slice(0,60).map(h=>{const isW=h.result==='win';const coinStr=h.coins>0?`+${h.coins}🪙`:h.coins<0?`${h.coins}🪙`:'';return`<div class="hi"><div class="hi-icon">${icons[h.game]||'🎮'}</div><div class="hi-body"><div class="hi-result ${isW?'win':'loss'}">${isW?'Victory':'Defeat'} · ${h.game.charAt(0).toUpperCase()+h.game.slice(1)}</div><div class="hi-detail">${h.how||''}${h.date?' · '+new Date(h.date).toLocaleDateString():''}</div></div>${coinStr?`<div class="hi-coins ${h.coins>0?'pos':'neg'}">${coinStr}</div>`:''}</div>`;}).join('');
+}
+
+function renderAchievements(){
+  const p=cp();const total=ACHS.length;const done=ACHS.filter(a=>achievements[a.id]).length;
+  document.getElementById('achSubtitle').textContent=`${done} / ${total} unlocked`;
+  document.getElementById('achGrid').innerHTML=ACHS.map(a=>{const ok=!!achievements[a.id];return`<div class="ach-card ${ok?'done':''}"><span class="ach-icon">${a.icon}</span><div class="ach-title">${a.name}</div><div class="ach-desc">${a.desc}</div></div>`;}).join('');
+}
+
+function renderProfiles(){
+  const active=cp();
+  const acard=document.getElementById('profActiveCard');
+  if(active){
+    const lv=lvInfo(active.xp);const pct=Math.round(lv.prog*100);
+    const tot=g=>g.w+g.l;const wr=g=>tot(g)>0?Math.round(g.w/tot(g)*100):0;
+    const achDone=ACHS.filter(a=>achievements[a.id]).slice(0,4);
+    acard.innerHTML=`<div class="active-prof-card">
+      <div class="apc-top">
+        <div class="apc-avatar-wrap"><div class="apc-ring"></div><div class="apc-avatar">${active.avatar}</div></div>
+        <div class="apc-info">
+          <div class="apc-name">${active.name}${active.streak>=3?' 🔥':''}</div>
+          <div class="apc-level">LV ${lv.lv} · ${lv.name}</div>
+          <div class="apc-coins">${active.coins.toLocaleString()} 🪙</div>
+        </div>
+      </div>
+      <div class="xp-bar-wrap">
+        <div class="xp-bar-label"><span>XP ${active.xp%XP_PER_LEVEL}/${XP_PER_LEVEL}</span><span>${pct}%</span></div>
+        <div class="xp-bar"><div class="xp-bar-fill" style="width:${pct}%"></div></div>
+      </div>
+      <div class="apc-game-stats">
+        ${[['chess','♟️','Chess'],['checkers','⬤','Checkers'],['ludo','🎲','Ludo']].map(([k,icon,name])=>{const g=active.stats[k];const w=wr(g);return`<div class="gstat"><span class="gstat-icon">${icon}</span><div class="gstat-label">${name}</div><div class="gstat-wr">${w}%</div><div class="gstat-wl">${g.w}W ${g.l}L</div><div class="gstat-bar"><div class="gstat-bar-fill" style="width:${w}%"></div></div></div>`;}).join('')}
+      </div>
+      ${achDone.length?`<div class="ach-mini-title">Recent Achievements</div><div class="ach-mini-grid">${achDone.map(a=>`<div class="ach-chip unlocked"><span class="ach-chip-icon">${a.icon}</span><span class="ach-chip-name">${a.name}</span></div>`).join('')}</div>`:''}
+    </div>`;
+  } else {acard.innerHTML='';}
+  const slots=document.getElementById('profSlots');slots.innerHTML='';
+  for(let i=0;i<4;i++){
+    const p=profiles[i];const s=document.createElement('div');
+    if(p){
+      const lv=lvInfo(p.xp);const tw=Object.values(p.stats).reduce((sum,g)=>sum+g.w,0);const tl=Object.values(p.stats).reduce((sum,g)=>sum+g.l,0);
+      s.className='prof-slot'+(p.id===curProfId?' sel':'');
+      s.innerHTML=`<div class="ps-av">${p.avatar}</div><div class="ps-info"><div class="ps-name">${p.name}${p.streak>=3?' 🔥':''}</div><div class="ps-meta">${tw}W ${tl}L · LV ${lv.lv}</div></div><div class="ps-coins">${p.coins.toLocaleString()}🪙</div>`;
+      s.onclick=()=>{curProfId=p.id;lsw('bm_cur',curProfId);renderProfiles();};
+      s.addEventListener('contextmenu',e=>{e.preventDefault();if(confirm(`Delete "${p.name}"?`)){profiles=profiles.filter(x=>x.id!==p.id);if(curProfId===p.id)curProfId=profiles[0]?.id||null;lsw('bm_profiles',profiles);lsw('bm_cur',curProfId);renderProfiles();}});
+    } else {
+      s.className='prof-slot empty';s.textContent='+ Create Profile';s.onclick=openCreateProfile;
+    }
+    slots.appendChild(s);
+  }
+}
+let _selAvatar=AVATARS[0];
+function openCreateProfile(){
+  if(profiles.length>=4){alert('Max 4 profiles');return;}
+  _selAvatar=AVATARS[0];
+  const g=document.getElementById('avGrid');g.innerHTML='';
+  AVATARS.forEach((a,i)=>{const d=document.createElement('div');d.className='av-opt'+(i===0?' sel':'');d.textContent=a;d.onclick=()=>{_selAvatar=a;g.querySelectorAll('.av-opt').forEach(x=>x.classList.remove('sel'));d.classList.add('sel');};g.appendChild(d);});
+  document.getElementById('profNameInput').value='';openModal('m-profile');
+}
+function saveProfile(){const n=document.getElementById('profNameInput').value.trim();if(!n){alert('Enter a name');return;}mkProfile(n,_selAvatar);closeModal('m-profile');renderProfiles();}
+
+// ─── WIN ───
+function showWin(playerName,how,trophy='🏆',isWin=true){
+  const game=G.game;
+  const coinsWon=isWin?G.wager*2:0;
+  const xpGain=isWin?(100+(G.wager>0?60:0)):0;
+  const p=cp();
+  if(p&&isWin){
+    p.stats[game].w++;p.coins=Math.max(0,p.coins+coinsWon);p.xp+=xpGain;p.streak++;
+    if(G.wager>=500)unlockAch('high_roller');
+    lsw('bm_profiles',profiles);
+    addHistory({game,result:'win',how,coins:coinsWon,profileId:p.id,date:Date.now()});
+    if(G.mode==='ai'){if(G.aiDiff==='easy')unlockAch('ai_easy');if(G.aiDiff==='hard')unlockAch('ai_hard');}
+    if(G.wager>0){const betWins=history.filter(h=>h.profileId===p.id&&h.result==='win'&&h.coins>0).length;if(betWins>=5)unlockAch('rich');}
+    checkAchs();
+  }
+  document.getElementById('winBadge').textContent={chess:'Chess',checkers:'Checkers',ludo:'Ludo'}[game];
+  document.getElementById('winTrophy').textContent=trophy;
+  document.getElementById('winPlayer').textContent=playerName;
+  document.getElementById('winHow').textContent=how;
+  const ce=document.getElementById('winCoins');const xe=document.getElementById('winXp');const se=document.getElementById('winStreak');
+  if(coinsWon>0){ce.textContent=`+${coinsWon} 🪙 Coins Won!`;ce.style.display='block';}else ce.style.display='none';
+  if(xpGain>0){xe.textContent=`+${xpGain} XP`;xe.style.display='block';}else xe.style.display='none';
+  if(p&&p.streak>=3){se.textContent=`🔥 ${p.streak}-game streak!`;se.style.display='block';}else se.style.display='none';
+  document.getElementById('s-win').classList.add('show');
+  updateCoins();snd('win');
+  setTimeout(startConfetti,150);
+}
+function hideWin(){document.getElementById('s-win').classList.remove('show');if(_confettiAnim){cancelAnimationFrame(_confettiAnim);_confettiAnim=null;}}
+function playAgain(){hideWin();launchGame();}
+
+function startConfetti(){
+  const c=document.getElementById('confetti-canvas');c.width=window.innerWidth;c.height=window.innerHeight;
+  const ctx=c.getContext('2d');
+  const COLS=['#f0c060','#c9a84c','#2979ff','#e53935','#00c853','#fff','#7c4dff','#ff8c00'];
+  const pieces=Array.from({length:130},()=>({x:Math.random()*c.width,y:Math.random()*-c.height,w:5+Math.random()*8,h:8+Math.random()*14,r:Math.random()*Math.PI*2,dr:(Math.random()-.5)*.16,vy:1.5+Math.random()*4,vx:(Math.random()-.5)*2.5,color:COLS[Math.floor(Math.random()*COLS.length)],op:1}));
+  let frame=0;
+  function draw(){ctx.clearRect(0,0,c.width,c.height);pieces.forEach(p=>{p.y+=p.vy;p.x+=p.vx;p.r+=p.dr;if(frame>200)p.op-=.006;if(p.y>c.height){p.y=-20;p.x=Math.random()*c.width;p.op=1;}ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.r);ctx.globalAlpha=Math.max(0,p.op);ctx.fillStyle=p.color;ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);ctx.restore();});frame++;_confettiAnim=requestAnimationFrame(draw);}
+  if(_confettiAnim)cancelAnimationFrame(_confettiAnim);draw();
+}
+
+// ─── LAUNCH ───
+let DPR=1;
+function launchGame(){
+  document.getElementById('ludo-ui').style.display='none';
+  document.getElementById('chess-log').style.display='none';
+  document.getElementById('btnUndo').style.display='none';
+  document.getElementById('aiThinking').style.display='none';
+  document.getElementById('ghName').textContent={chess:'Chess',checkers:'Checkers',ludo:'Ludo'}[G.game];
+  updateCoins();show('s-game');checkDailyBonus();
+  requestAnimationFrame(()=>{
+    const canvas=document.getElementById('gameCanvas');
+    const body=document.querySelector('.game-body');
+    const br=body.getBoundingClientRect();
+    const extraH=G.game==='ludo'?115:0;
+    const logW=G.game==='chess'?110:0;
+    const sz=Math.max(Math.min(br.width-20-logW,br.height-20-extraH,660),200);
+    DPR=window.devicePixelRatio||1;
+    canvas.style.width=sz+'px';canvas.style.height=sz+'px';
+    canvas.width=Math.round(sz*DPR);canvas.height=Math.round(sz*DPR);
+    const ctx=canvas.getContext('2d');ctx.scale(DPR,DPR);
+    if(G.game==='chess'){chessInit(canvas,ctx,sz);if(G.mode!=='ai')document.getElementById('chess-log').style.display='block';}
+    else if(G.game==='checkers')ckInit(canvas,ctx,sz);
+    else if(G.game==='ludo')ldInit(canvas,ctx,sz);
+    if(G.mode==='local')document.getElementById('btnUndo').style.display='block';
+    // Online: signal we are ready, show overlay until opponent confirms
+    if(G.mode==='online'){
+      notifyReady();
+      if(!G.opponentReady){
+        let ov=document.getElementById('net-wait-ov');
+        if(!ov){ov=document.createElement('div');ov.id='net-wait-ov';ov.style.cssText='position:absolute;inset:0;background:rgba(5,5,14,.82);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:50;gap:12px;';ov.innerHTML='<div style="font-size:28px">🌐</div><div style="font-family:Cinzel,serif;font-size:15px;color:#f0c060">Waiting for opponent<span class="dot-pulse"></span></div><div style="font-size:11px;color:#5a5a90">Game will start automatically</div>';body.appendChild(ov);}
+        else{ov.style.display='flex';}
+      }
+    }
+  });
+}
+
+// ─── PEER ───
+function initLobby(){
+  const code=Math.random().toString(36).substring(2,8).toUpperCase();
+  const pid='bm-'+code.toLowerCase();
+  document.getElementById('roomCode').textContent='· · · · · ·';
+  document.getElementById('hostSt').textContent='Connecting';document.getElementById('hostSt').className='ls-status wait dot-pulse';
+  document.getElementById('joinSt').textContent='';document.getElementById('btnJoin').disabled=false;
+  cleanPeer();
+  try{G.peer=new Peer(pid,{debug:0});
+    G.peer.on('open',()=>{document.getElementById('roomCode').textContent=code;document.getElementById('hostSt').textContent='Waiting for opponent…';document.getElementById('hostSt').className='ls-status wait';});
+    G.peer.on('connection',conn=>{G.conn=conn;G.role='host';conn.on('open',()=>{conn.send({type:'start',game:G.game});setLSt('hostSt','Connected!','ok');setTimeout(showBetModal,400);});conn.on('data',handleNet);conn.on('close',()=>setTurn('Opponent disconnected'));});
+    G.peer.on('error',()=>setLSt('hostSt','Error — use local mode','err'));
+  }catch(e){setLSt('hostSt','PeerJS unavailable','err');}
+}
+function joinRoom(){
+  const code=document.getElementById('joinInput').value.trim().toUpperCase();
+  if(code.length<6){setLSt('joinSt','Enter 6-character code','err');return;}
+  setLSt('joinSt','Connecting…','wait dot-pulse');document.getElementById('btnJoin').disabled=true;
+  cleanPeer();G.peer=new Peer(undefined,{debug:0});
+  G.peer.on('open',()=>{G.conn=G.peer.connect('bm-'+code.toLowerCase(),{reliable:true});
+    G.conn.on('open',()=>setLSt('joinSt','Connected!','ok'));
+    G.conn.on('data',d=>{if(d.type==='start'){G.game=d.game;G.role='guest';setTimeout(showBetModal,300);}else handleNet(d);});
+    G.conn.on('error',()=>{setLSt('joinSt','Could not connect','err');document.getElementById('btnJoin').disabled=false;});
+  });
+  G.peer.on('error',()=>{setLSt('joinSt','Connection failed','err');document.getElementById('btnJoin').disabled=false;});
+}
+function setLSt(id,msg,cls){const el=document.getElementById(id);el.textContent=msg;el.className='ls-status '+cls;}
+function send(data){if(G.conn&&G.conn.open)G.conn.send(data);}
+function cleanPeer(){if(G.conn){try{G.conn.close();}catch(e){}G.conn=null;}if(G.peer){try{G.peer.destroy();}catch(e){}G.peer=null;}G.opponentReady=false;G.netQueue=[];}
+function leaveLobby(){cleanPeer();show('s-mode');}
+
+// ── READY HANDSHAKE + MESSAGE QUEUE ──
+// Both sides send {type:'player-ready'} right after their game initialises.
+// Until the opponent's ready message arrives, moves are queued and applied after.
+// This prevents the common race condition: host moves before guest has init'd.
+G.opponentReady=false;
+G.netQueue=[];
+
+function notifyReady(){
+  send({type:'player-ready'});
+  // Now drain anything that arrived before we were ready
+  G.netQueue.forEach(d=>applyNetMsg(d));
+  G.netQueue=[];
+}
+
+function handleNet(d){
+  if(d.type==='player-ready'){
+    G.opponentReady=true;
+    // Dismiss the "waiting" overlay
+    const ov=document.getElementById('net-wait-ov');if(ov)ov.style.display='none';
+    return;
+  }
+  // If our game isn't initialised yet, queue the message
+  const gameReady=(G.game==='chess'&&CH.board)||(G.game==='checkers'&&CK.board)||(G.game==='ludo'&&LD.tokens);
+  if(!gameReady){G.netQueue.push(d);return;}
+  applyNetMsg(d);
+}
+
+function applyNetMsg(d){
+  if(d.type==='chess-move'){if(CH.board)chessApplyRemote(d.move);}
+  else if(d.type==='ck-move'){if(CK.board)ckApplyRemote(d.move);}
+  else if(d.type==='ludo-roll'){if(LD.tokens)ldApplyDice(d.v1,d.v2);}
+  else if(d.type==='ludo-move'){if(LD.tokens)ldApplyMove(d.ti,d.dieIdx);}
+}
+
+// ════════════════════════════════════════════════
+//  CHESS + AI
+// ════════════════════════════════════════════════
+let CH={};
+const CP={wK:'♔',wQ:'♕',wR:'♖',wB:'♗',wN:'♘',wP:'♙',bK:'♚',bQ:'♛',bR:'♜',bB:'♝',bN:'♞',bP:'♟'};
+const MVAL={P:100,N:320,B:330,R:500,Q:900,K:0};
+const PST={
+  P:[[0,0,0,0,0,0,0,0],[50,50,50,50,50,50,50,50],[10,10,20,30,30,20,10,10],[5,5,10,25,25,10,5,5],[0,0,0,20,20,0,0,0],[5,-5,-10,0,0,-10,-5,5],[5,10,10,-20,-20,10,10,5],[0,0,0,0,0,0,0,0]],
+  N:[[-50,-40,-30,-30,-30,-30,-40,-50],[-40,-20,0,0,0,0,-20,-40],[-30,0,10,15,15,10,0,-30],[-30,5,15,20,20,15,5,-30],[-30,0,15,20,20,15,0,-30],[-30,5,10,15,15,10,5,-30],[-40,-20,0,5,5,0,-20,-40],[-50,-40,-30,-30,-30,-30,-40,-50]],
+  B:[[-20,-10,-10,-10,-10,-10,-10,-20],[-10,0,0,0,0,0,0,-10],[-10,0,5,10,10,5,0,-10],[-10,5,5,10,10,5,5,-10],[-10,0,10,10,10,10,0,-10],[-10,10,10,10,10,10,10,-10],[-10,5,0,0,0,0,5,-10],[-20,-10,-10,-10,-10,-10,-10,-20]],
+  R:[[0,0,0,0,0,0,0,0],[5,10,10,10,10,10,10,5],[-5,0,0,0,0,0,0,-5],[-5,0,0,0,0,0,0,-5],[-5,0,0,0,0,0,0,-5],[-5,0,0,0,0,0,0,-5],[-5,0,0,0,0,0,0,-5],[0,0,0,5,5,0,0,0]],
+  Q:[[-20,-10,-10,-5,-5,-10,-10,-20],[-10,0,0,0,0,0,0,-10],[-10,0,5,5,5,5,0,-10],[-5,0,5,5,5,5,0,-5],[0,0,5,5,5,5,0,-5],[-10,5,5,5,5,5,0,-10],[-10,0,5,0,0,0,0,-10],[-20,-10,-10,-5,-5,-10,-10,-20]],
+  K:[[-30,-40,-40,-50,-50,-40,-40,-30],[-30,-40,-40,-50,-50,-40,-40,-30],[-30,-40,-40,-50,-50,-40,-40,-30],[-30,-40,-40,-50,-50,-40,-40,-30],[-20,-30,-30,-40,-40,-30,-30,-20],[-10,-20,-20,-20,-20,-20,-20,-10],[20,20,0,0,0,0,20,20],[20,30,10,0,0,10,30,20]]
+};
+function chessInit(canvas,ctx,sz){
+  CH={canvas,ctx,sz,board:chessNewBoard(),turn:'w',sel:null,moves:[],castling:{w:{k:true,q:true},b:{k:true,q:true}},ep:null,lastMove:null,pending:null,status:'playing',history:[],logMoves:[]};
+  drawChessLog();chessDraw();chessStatus();
+  canvas.removeEventListener('pointerdown',onChessPtr);canvas.addEventListener('pointerdown',onChessPtr);
+  if(G.mode==='ai'&&G.role!=='host')setTimeout(chessAI,400);
+}
+function chessNewBoard(){const B=Array(8).fill(null).map(()=>Array(8).fill(null));const back=['R','N','B','Q','K','B','N','R'];for(let c=0;c<8;c++){B[0][c]={t:back[c],c:'b'};B[1][c]={t:'P',c:'b'};B[6][c]={t:'P',c:'w'};B[7][c]={t:back[c],c:'w'};}return B;}
+
+function chessDraw(){
+  const{ctx,sz,board,sel,moves,lastMove}=CH;const sq=sz/8;ctx.clearRect(0,0,sz,sz);
+  for(let r=0;r<8;r++)for(let c=0;c<8;c++){
+    let fill=(r+c)%2===0?'#f0d9b5':'#b58863';
+    if(lastMove&&((lastMove.f[0]===r&&lastMove.f[1]===c)||(lastMove.t[0]===r&&lastMove.t[1]===c)))fill=(r+c)%2===0?'#cdd26a':'#aaa23a';
+    if(sel&&sel[0]===r&&sel[1]===c)fill='#f6f669';
+    ctx.fillStyle=fill;ctx.fillRect(c*sq,r*sq,sq,sq);
+    if(moves.some(m=>m.t[0]===r&&m.t[1]===c)){if(board[r][c]){ctx.strokeStyle='rgba(0,100,0,.5)';ctx.lineWidth=4;ctx.strokeRect(c*sq+2,r*sq+2,sq-4,sq-4);}else{ctx.fillStyle='rgba(0,100,0,.22)';ctx.beginPath();ctx.arc(c*sq+sq/2,r*sq+sq/2,sq*.15,0,Math.PI*2);ctx.fill();}}
+    const p=board[r][c];if(p){ctx.font=`${sq*.76}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='rgba(0,0,0,.22)';ctx.fillText(CP[p.c+p.t],c*sq+sq/2+1.5,r*sq+sq/2+2);ctx.fillStyle=p.c==='w'?'#fff':'#111';ctx.fillText(CP[p.c+p.t],c*sq+sq/2,r*sq+sq/2);}
+  }
+}
+function onChessPtr(e){
+  e.preventDefault();if(CH.status!=='playing'||CH.pending)return;
+  if(G.mode==='online'&&!G.opponentReady)return; // wait for handshake
+  if(G.mode==='ai'&&CH.turn==='b')return;
+  if(G.mode==='online'&&((G.role==='host'&&CH.turn!=='w')||(G.role==='guest'&&CH.turn!=='b')))return;
+  const rect=CH.canvas.getBoundingClientRect();const sq=CH.sz/8;
+  const row=Math.floor((e.clientY-rect.top)/sq),col=Math.floor((e.clientX-rect.left)/sq);
+  if(row<0||row>7||col<0||col>7)return;
+  if(CH.sel){const mv=CH.moves.find(m=>m.t[0]===row&&m.t[1]===col);if(mv){if(mv.promo){CH.pending=mv;const syms=CH.turn==='w'?['♕','♖','♗','♘']:['♛','♜','♝','♞'];['pq','pr','pb','pn'].forEach((id,i)=>document.getElementById(id).textContent=syms[i]);openModal('m-prom');return;}chessExec(mv);return;}CH.sel=null;CH.moves=[];}
+  const p=CH.board[row][col];if(p&&p.c===CH.turn){CH.sel=[row,col];CH.moves=chessLegal(CH.board,row,col,CH);}
+  chessDraw();
+}
+function doPromo(t){closeModal('m-prom');if(!CH.pending)return;CH.pending.promoTo=t;chessExec(CH.pending);CH.pending=null;}
+function chessExec(mv){
+  snd('move');
+  CH.history.push({board:CH.board.map(r=>[...r]),castling:{w:{...CH.castling.w},b:{...CH.castling.b}},ep:CH.ep});
+  CH.board=chessApply(CH.board,mv,CH);CH.lastMove={f:mv.f,t:mv.t};
+  // log
+  const notation=chessNotation(mv,CH.board);CH.logMoves.push({n:Math.ceil(CH.logMoves.length/2+1),color:CH.turn==='w'?'w':'b',text:notation});
+  if(G.mode==='online')send({type:'chess-move',move:mv});
+  CH.turn=CH.turn==='w'?'b':'w';CH.sel=null;CH.moves=[];CH.status=chessCalcStatus();chessDraw();chessStatus();drawChessLog();
+  if(G.mode==='ai'&&CH.turn==='b'&&CH.status==='playing')setTimeout(chessAI,300);
+}
+function chessApplyRemote(mv){
+  CH.board=chessApply(CH.board,mv,CH);CH.lastMove={f:mv.f,t:mv.t};
+  CH.turn=CH.turn==='w'?'b':'w';CH.sel=null;CH.moves=[];CH.status=chessCalcStatus();chessDraw();chessStatus();
+}
+function chessApply(board,mv,state){
+  const B=board.map(r=>[...r]);const[fr,fc]=mv.f,[tr,tc]=mv.t;const p=B[fr][fc];
+  if(mv.ep)B[mv.epCapRow][tc]=null;
+  if(mv.castle==='k'){const row2=fr;B[row2][7]=null;B[row2][5]={t:'R',c:p.c};}
+  else if(mv.castle==='q'){const row2=fr;B[row2][0]=null;B[row2][3]={t:'R',c:p.c};}
+  B[tr][tc]=mv.promoTo?{t:mv.promoTo,c:p.c}:p;B[fr][fc]=null;
+  if(p.t==='K')state.castling[p.c]={k:false,q:false};
+  if(p.t==='R'){if(fc===0)state.castling[p.c].q=false;if(fc===7)state.castling[p.c].k=false;}
+  state.ep=mv.dblPush?[(fr+tr)/2,tc]:null;return B;
+}
+function chessLegal(board,row,col,state){const p=board[row][col];if(!p)return[];return chessPseudo(board,row,col,state).filter(mv=>{const s2={castling:{w:{...state.castling.w},b:{...state.castling.b}},ep:state.ep};const nb=chessApply(board.map(r=>[...r]),mv,s2);return!chessInCheck(nb,p.c);});}
+function chessPseudo(board,row,col,state){
+  const p=board[row][col];if(!p)return[];const{t,c}=p,opp=c==='w'?'b':'w',ms=[];
+  const push=(r2,c2,ex={})=>{if(r2<0||r2>7||c2<0||c2>7)return false;if(board[r2][c2]?.c===c)return false;ms.push({f:[row,col],t:[r2,c2],...ex});return!board[r2][c2];};
+  const slide=dirs=>{for(const[dr,dc]of dirs){let r2=row+dr,c2=col+dc;while(r2>=0&&r2<8&&c2>=0&&c2<8){const q=board[r2][c2];if(q){if(q.c!==c)ms.push({f:[row,col],t:[r2,c2]});break;}ms.push({f:[row,col],t:[r2,c2]});r2+=dr;c2+=dc;}}};
+  if(t==='P'){const d=c==='w'?-1:1,sr=c==='w'?6:1,pr=c==='w'?0:7,r1=row+d;if(r1>=0&&r1<8&&!board[r1][col]){if(r1===pr)['Q','R','B','N'].forEach(pt=>ms.push({f:[row,col],t:[r1,col],promo:true,promoTo:pt}));else{ms.push({f:[row,col],t:[r1,col]});if(row===sr&&!board[row+d*2][col])ms.push({f:[row,col],t:[row+d*2,col],dblPush:true});}}for(const dc of[-1,1]){const cc=col+dc;if(cc<0||cc>7)continue;const tgt=board[r1]?.[cc];if(tgt&&tgt.c===opp){if(r1===pr)['Q','R','B','N'].forEach(pt=>ms.push({f:[row,col],t:[r1,cc],promo:true,promoTo:pt}));else ms.push({f:[row,col],t:[r1,cc]});}if(state.ep&&state.ep[0]===r1&&state.ep[1]===cc)ms.push({f:[row,col],t:[r1,cc],ep:true,epCapRow:row});}}
+  else if(t==='N')[[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]].forEach(([dr,dc])=>push(row+dr,col+dc));
+  else if(t==='B')slide([[-1,-1],[-1,1],[1,-1],[1,1]]);else if(t==='R')slide([[-1,0],[1,0],[0,-1],[0,1]]);else if(t==='Q')slide([[-1,-1],[-1,1],[1,-1],[1,1],[-1,0],[1,0],[0,-1],[0,1]]);
+  else if(t==='K'){[[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]].forEach(([dr,dc])=>push(row+dr,col+dc));const br=c==='w'?7:0;if(row===br&&col===4&&!chessInCheck(board,c)){if(state.castling[c].k&&!board[br][5]&&!board[br][6]&&board[br][7]?.t==='R'&&!chessAtt(board,br,5,opp)&&!chessAtt(board,br,6,opp))ms.push({f:[row,col],t:[br,6],castle:'k'});if(state.castling[c].q&&!board[br][3]&&!board[br][2]&&!board[br][1]&&board[br][0]?.t==='R'&&!chessAtt(board,br,3,opp)&&!chessAtt(board,br,2,opp))ms.push({f:[row,col],t:[br,2],castle:'q'});}}
+  return ms;
+}
+function chessInCheck(board,color){let kr=-1,kc=-1;for(let r=0;r<8;r++)for(let c=0;c<8;c++)if(board[r][c]?.t==='K'&&board[r][c]?.c===color){kr=r;kc=c;}if(kr<0)return false;return chessAtt(board,kr,kc,color==='w'?'b':'w');}
+function chessAtt(board,row,col,by){
+  const d=by==='b'?1:-1;for(const dc of[-1,1]){const r2=row+d;if(r2>=0&&r2<8&&col+dc>=0&&col+dc<8){const p=board[r2][col+dc];if(p?.t==='P'&&p?.c===by)return true;}}
+  for(const[dr,dc]of[[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]]){const r2=row+dr,c2=col+dc;if(r2>=0&&r2<8&&c2>=0&&c2<8&&board[r2][c2]?.c===by&&board[r2][c2]?.t==='N')return true;}
+  for(const[dr,dc]of[[-1,0],[1,0],[0,-1],[0,1]]){let r2=row+dr,c2=col+dc;while(r2>=0&&r2<8&&c2>=0&&c2<8){const p=board[r2][c2];if(p){if(p.c===by&&(p.t==='R'||p.t==='Q'))return true;break;}r2+=dr;c2+=dc;}}
+  for(const[dr,dc]of[[-1,-1],[-1,1],[1,-1],[1,1]]){let r2=row+dr,c2=col+dc;while(r2>=0&&r2<8&&c2>=0&&c2<8){const p=board[r2][c2];if(p){if(p.c===by&&(p.t==='B'||p.t==='Q'))return true;break;}r2+=dr;c2+=dc;}}
+  for(const[dr,dc]of[[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]]){const r2=row+dr,c2=col+dc;if(r2>=0&&r2<8&&c2>=0&&c2<8&&board[r2][c2]?.c===by&&board[r2][c2]?.t==='K')return true;}
+  return false;
+}
+function chessAllLegal(color){const ms=[];for(let r=0;r<8;r++)for(let c=0;c<8;c++)if(CH.board[r][c]?.c===color)ms.push(...chessLegal(CH.board,r,c,CH));return ms;}
+function chessCalcStatus(){const inCheck=chessInCheck(CH.board,CH.turn);const has=chessAllLegal(CH.turn).length>0;if(!has)return inCheck?'mate':'stale';return inCheck?'check':'playing';}
+function chessStatus(){
+  const N={w:'White',b:'Black'},t=N[CH.turn],o=N[CH.turn==='w'?'b':'w'];const p=cp();
+  if(CH.status==='mate'){setTurn(`${t} in Checkmate`);showWin(`${o} Wins!`,'By Checkmate','♛');}
+  else if(CH.status==='stale'){setTurn('Stalemate — Draw');showWin('Draw!','Stalemate','🤝',false);}
+  else if(CH.status==='check')setTurn(`<b>${t}'s turn</b> ⚠️ Check!`);
+  else setTurn(`<b>${t}'s turn</b>${G.mode==='ai'&&CH.turn==='b'?' 🤖':''}`);
+}
+function chessNotation(mv){const fc=['a','b','c','d','e','f','g','h'];const rn=r=>8-r;const p=CH.board[mv.f[0]][mv.f[1]];const cap=!!CH.board[mv.t[0]][mv.t[1]];const sym={P:'',N:'N',B:'B',R:'R',Q:'Q',K:'K'}[p?.t||'P'];return `${sym}${cap?'x':''}${fc[mv.t[1]]}${rn(mv.t[0])}${mv.promoTo?'='+mv.promoTo:''}`;}
+function drawChessLog(){
+  const list=document.getElementById('chessLogList');list.innerHTML='';
+  const moves=CH.logMoves;
+  for(let i=0;i<moves.length;i+=2){const w=moves[i];const b=moves[i+1];list.innerHTML+=`<div class="log-move"><span class="mn">${Math.floor(i/2)+1}.</span><span class="mw">${w?.text||''}</span><span class="mb">${b?.text||''}</span></div>`;}
+  list.scrollTop=list.scrollHeight;
+}
+function doUndo(){
+  if(!CH.history||!CH.history.length)return;
+  const prev=CH.history.pop();CH.board=prev.board;CH.castling=prev.castling;CH.ep=prev.ep;
+  CH.turn=CH.turn==='w'?'b':'w';CH.logMoves.pop();CH.sel=null;CH.moves=[];CH.status=chessCalcStatus();
+  chessDraw();chessStatus();drawChessLog();
+}
+
+// ─── CHESS AI ───
+function chessEval(board,color){
+  let score=0;
+  for(let r=0;r<8;r++)for(let c=0;c<8;c++){
+    const p=board[r][c];if(!p)continue;
+    const base=MVAL[p.t]||0;
+    const pstRow=p.c==='w'?r:7-r;
+    const pst=(PST[p.t]?.[pstRow]?.[c])||0;
+    const val=base+pst;
+    score+=(p.c===color?1:-1)*val;
+  }
+  return score;
+}
+function chessMinMax(board,depth,alpha,beta,isMax,state,color){
+  const cs=chessInCheck(board,isMax?color:color==='w'?'b':'w');
+  if(depth===0)return{score:chessEval(board,color)};
+  const turn=isMax?color:color==='w'?'b':'w';
+  const allmv=[];for(let r=0;r<8;r++)for(let c=0;c<8;c++)if(board[r][c]?.c===turn)allmv.push(...chessLegal(board,r,c,state));
+  if(!allmv.length)return{score:cs?(isMax?-50000:50000):0};
+  // shallow sort for better pruning
+  if(depth>1)allmv.sort((a,b)=>{const capA=board[a.t[0]][a.t[1]]?MVAL[board[a.t[0]][a.t[1]].t]||0:0;const capB=board[b.t[0]][b.t[1]]?MVAL[board[b.t[0]][b.t[1]].t]||0:0;return capB-capA;});
+  let best=null;let bestScore=isMax?-Infinity:Infinity;
+  for(const mv of allmv){
+    const s2={castling:{w:{...state.castling.w},b:{...state.castling.b}},ep:state.ep};
+    const nb=chessApply(board.map(rr=>[...rr]),mv,s2);
+    const{score}=chessMinMax(nb,depth-1,alpha,beta,!isMax,s2,color);
+    if(isMax){if(score>bestScore){bestScore=score;best=mv;}alpha=Math.max(alpha,score);}
+    else{if(score<bestScore){bestScore=score;best=mv;}beta=Math.min(beta,score);}
+    if(beta<=alpha)break;
+  }
+  return{score:bestScore,move:best};
+}
+function chessAI(){
+  if(CH.status!=='playing'||CH.turn!=='b')return;
+  document.getElementById('aiThinking').style.display='block';
+  const depth={easy:1,medium:3,hard:4}[G.aiDiff]||2;
+  setTimeout(()=>{
+    const state={castling:{w:{...CH.castling.w},b:{...CH.castling.b}},ep:CH.ep};
+    if(G.aiDiff==='easy'){
+      // Easy: random legal move (occasionally random)
+      const allmv=[];for(let r=0;r<8;r++)for(let c=0;c<8;c++)if(CH.board[r][c]?.c==='b')allmv.push(...chessLegal(CH.board,r,c,CH));
+      if(allmv.length){const mv=allmv[Math.floor(Math.random()*allmv.length)];document.getElementById('aiThinking').style.display='none';if(mv.promo)mv.promoTo='Q';chessExec(mv);}
+    } else {
+      const{move}=chessMinMax(CH.board.map(r=>[...r]),depth,-Infinity,Infinity,false,state,'w');
+      document.getElementById('aiThinking').style.display='none';
+      if(move){if(move.promo)move.promoTo='Q';chessExec(move);}
+    }
+  },30);
+}
+
+// ════════════════════════════════════════════════
+//  CHECKERS + AI
+// ════════════════════════════════════════════════
+let CK={};
+function ckInit(canvas,ctx,sz){CK={canvas,ctx,sz,board:ckNewBoard(),turn:'r',sel:null,legalMoves:[],forcePiece:null,status:'playing',history:[]};ckDraw();ckStatus();canvas.removeEventListener('pointerdown',onCKPtr);canvas.addEventListener('pointerdown',onCKPtr);if(G.mode==='ai')setTimeout(ckAI,400);}
+function ckNewBoard(){const B=Array(8).fill(null).map(()=>Array(8).fill(null));for(let r=0;r<3;r++)for(let c=0;c<8;c++)if((r+c)%2===1)B[r][c]={c:'b',k:false};for(let r=5;r<8;r++)for(let c=0;c<8;c++)if((r+c)%2===1)B[r][c]={c:'r',k:false};return B;}
+function ckJumpsFrom(board,row,col){const p=board[row][col];if(!p)return[];const dirs=[];if(p.c==='r'||p.k)dirs.push([-1,-1],[-1,1]);if(p.c==='b'||p.k)dirs.push([1,-1],[1,1]);const jumps=[];for(const[dr,dc]of dirs){const mr=row+dr,mc=col+dc,lr=row+dr*2,lc=col+dc*2;if(lr<0||lr>7||lc<0||lc>7)continue;const mid=board[mr]?.[mc];if(mid&&mid.c!==p.c&&!board[lr][lc])jumps.push({f:[row,col],t:[lr,lc],cap:[mr,mc]});}return jumps;}
+function ckSimpleFrom(board,row,col){const p=board[row][col];if(!p)return[];const dirs=[];if(p.c==='r'||p.k)dirs.push([-1,-1],[-1,1]);if(p.c==='b'||p.k)dirs.push([1,-1],[1,1]);return dirs.flatMap(([dr,dc])=>{const nr=row+dr,nc=col+dc;return nr>=0&&nr<=7&&nc>=0&&nc<=7&&!board[nr][nc]?[{f:[row,col],t:[nr,nc]}]:[];});}
+function ckAllLegal(board,color,fp=null){if(fp)return ckJumpsFrom(board,fp[0],fp[1]);const j=[];for(let r=0;r<8;r++)for(let c=0;c<8;c++)if(board[r][c]?.c===color)j.push(...ckJumpsFrom(board,r,c));if(j.length)return j;const s=[];for(let r=0;r<8;r++)for(let c=0;c<8;c++)if(board[r][c]?.c===color)s.push(...ckSimpleFrom(board,r,c));return s;}
+function ckApply(board,mv){const B=board.map(r=>[...r]);const[fr,fc]=mv.f,[tr,tc]=mv.t;B[tr][tc]={...B[fr][fc]};B[fr][fc]=null;if(mv.cap)B[mv.cap[0]][mv.cap[1]]=null;if(B[tr][tc].c==='r'&&tr===0)B[tr][tc]={...B[tr][tc],k:true};if(B[tr][tc].c==='b'&&tr===7)B[tr][tc]={...B[tr][tc],k:true};return B;}
+function onCKPtr(e){
+  e.preventDefault();if(CK.status!=='playing')return;
+  if(G.mode==='online'&&!G.opponentReady)return; // wait for handshake
+  const isMyTurn=G.mode==='ai'?CK.turn==='r':G.mode==='local'||((G.role==='host'&&CK.turn==='r')||(G.role==='guest'&&CK.turn==='b'));
+  if(!isMyTurn)return;
+  const rect=CK.canvas.getBoundingClientRect();const sq=CK.sz/8;
+  const row=Math.floor((e.clientY-rect.top)/sq),col=Math.floor((e.clientX-rect.left)/sq);
+  if(row<0||row>7||col<0||col>7)return;
+  if(CK.sel){const mv=CK.legalMoves.find(m=>m.t[0]===row&&m.t[1]===col);if(mv){ckExec(mv);return;}if(!CK.forcePiece){CK.sel=null;CK.legalMoves=[];}}
+  const all=ckAllLegal(CK.board,CK.turn,CK.forcePiece);const pm=all.filter(m=>m.f[0]===row&&m.f[1]===col);
+  if(pm.length){CK.sel=[row,col];CK.legalMoves=pm;}else if(!CK.forcePiece){CK.sel=null;CK.legalMoves=[];}
+  ckDraw();
+}
+function ckExec(mv,fromNet=false){
+  if(mv.cap)snd('capture');else snd('move');
+  CK.history.push(CK.board.map(r=>[...r]));
+  const prevRPieces=CK.board.flat().filter(p=>p?.c==='r').length;
+  CK.board=ckApply(CK.board,mv);
+  if(!fromNet&&G.mode==='online')send({type:'ck-move',move:mv});
+  const curBPieces=CK.board.flat().filter(p=>p?.c==='b').length;
+  if(mv.cap){
+    const further=ckJumpsFrom(CK.board,mv.t[0],mv.t[1]);
+    if(further.length){CK.forcePiece=mv.t;CK.sel=mv.t;CK.legalMoves=further;ckDraw();return;}
+    // Check flawless achievement
+    const afterRPieces=CK.board.flat().filter(p=>p?.c==='r').length;
+    if(curBPieces===0&&afterRPieces===prevRPieces)unlockAch('flawless');
+  }
+  CK.forcePiece=null;CK.sel=null;CK.legalMoves=[];CK.turn=CK.turn==='r'?'b':'r';
+  CK.status=ckCalcStatus();ckDraw();ckStatus();
+  if(G.mode==='ai'&&CK.turn==='b'&&CK.status==='playing')setTimeout(ckAI,300);
+}
+function ckApplyRemote(mv){ckExec(mv,true);}
+function ckCalcStatus(){let rp=0,bp=0;CK.board.flat().forEach(p=>{if(p?.c==='r')rp++;if(p?.c==='b')bp++;});if(rp===0||ckAllLegal(CK.board,'r').length===0)return'b-wins';if(bp===0||ckAllLegal(CK.board,'b').length===0)return'r-wins';return'playing';}
+function ckStatus(){const p=cp();if(CK.status==='r-wins'){setTurn('Red wins!');showWin('Red Wins!','All pieces captured!','🔴');}else if(CK.status==='b-wins'){setTurn('Black wins!');showWin('Black Wins!','All pieces captured!','⚫');}else setTurn(`<b>${CK.turn==='r'?'Red':'Black'}'s turn</b>${G.mode==='ai'&&CK.turn==='b'?' 🤖':''}`);}
+function ckDraw(){
+  const{ctx,sz,board,sel,legalMoves,forcePiece}=CK;const sq=sz/8;ctx.clearRect(0,0,sz,sz);
+  for(let r=0;r<8;r++)for(let c=0;c<8;c++){
+    const dark=(r+c)%2===1;ctx.fillStyle=dark?'#5d4037':'#efebe9';ctx.fillRect(c*sq,r*sq,sq,sq);if(!dark)continue;
+    if(sel&&sel[0]===r&&sel[1]===c){ctx.fillStyle='rgba(255,200,0,.35)';ctx.fillRect(c*sq,r*sq,sq,sq);}
+    if(legalMoves.some(m=>m.t[0]===r&&m.t[1]===c)){ctx.fillStyle='rgba(80,255,80,.28)';ctx.fillRect(c*sq,r*sq,sq,sq);ctx.fillStyle='rgba(0,180,0,.5)';ctx.beginPath();ctx.arc(c*sq+sq/2,r*sq+sq/2,sq*.12,0,Math.PI*2);ctx.fill();}
+    const all=ckAllLegal(board,CK.turn,forcePiece);if(all.some(m=>m.f[0]===r&&m.f[1]===c)&&!(sel&&sel[0]===r&&sel[1]===c)){ctx.strokeStyle='rgba(255,200,0,.5)';ctx.lineWidth=2;ctx.strokeRect(c*sq+1,r*sq+1,sq-2,sq-2);}
+    const p=board[r][c];if(!p)continue;
+    const x=c*sq+sq/2,y=r*sq+sq/2,rad=sq*.38;
+    ctx.fillStyle='rgba(0,0,0,.3)';ctx.beginPath();ctx.arc(x+2,y+2.5,rad,0,Math.PI*2);ctx.fill();
+    const g=ctx.createRadialGradient(x-rad*.3,y-rad*.3,rad*.1,x,y,rad);
+    if(p.c==='r'){g.addColorStop(0,'#ff6b6b');g.addColorStop(1,'#b71c1c');}else{g.addColorStop(0,'#777');g.addColorStop(1,'#111');}
+    ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,rad,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle=p.c==='r'?'rgba(255,160,160,.45)':'rgba(255,255,255,.12)';ctx.lineWidth=1.5;ctx.stroke();
+    if(p.k){ctx.fillStyle='#ffd700';ctx.font=`bold ${sq*.36}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('♔',x,y);}
+  }
+}
+// Checkers AI
+function ckEval(board,color){let s=0;board.flat().forEach(p=>{if(!p)return;const v=(p.k?5:3)*(p.c===color?1:-1);s+=v;});return s;}
+function ckMiniMax(board,depth,alpha,beta,isMax,color){
+  const turn=isMax?color:color==='r'?'b':'r';
+  const moves=ckAllLegal(board,turn);
+  if(!moves.length||depth===0)return{score:ckEval(board,color)};
+  let best=null,bestScore=isMax?-Infinity:Infinity;
+  for(const mv of moves){
+    const nb=ckApply(board.map(r=>[...r]),mv);
+    let{score}=ckMiniMax(nb,depth-1,alpha,beta,!isMax,color);
+    if(isMax){if(score>bestScore){bestScore=score;best=mv;}alpha=Math.max(alpha,score);}
+    else{if(score<bestScore){bestScore=score;best=mv;}beta=Math.min(beta,score);}
+    if(beta<=alpha)break;
+  }
+  return{score:bestScore,move:best};
+}
+function ckAI(){
+  if(CK.status!=='playing'||CK.turn!=='b')return;
+  document.getElementById('aiThinking').style.display='block';
+  const depth={easy:2,medium:4,hard:6}[G.aiDiff]||3;
+  setTimeout(()=>{
+    if(G.aiDiff==='easy'){const ms=ckAllLegal(CK.board,'b');if(ms.length){document.getElementById('aiThinking').style.display='none';ckExec(ms[Math.floor(Math.random()*ms.length)]);}}
+    else{const{move}=ckMiniMax(CK.board.map(r=>[...r]),depth,-Infinity,Infinity,true,'b');document.getElementById('aiThinking').style.display='none';if(move)ckExec(move);}
+  },40);
+}
+
+// ════════════════════════════════════════════════
+//  LUDO — NIGERIAN RULES (2 dice, separate moves)
+// ════════════════════════════════════════════════
+let LD={};
+// Board path (52 squares, 15×15 grid)
+const LD_PATH=[[6,0],[6,1],[6,2],[6,3],[6,4],[6,5],[5,6],[4,6],[3,6],[2,6],[1,6],[0,6],[0,7],[0,8],[1,8],[2,8],[3,8],[4,8],[5,8],[6,9],[6,10],[6,11],[6,12],[6,13],[6,14],[7,14],[8,14],[8,13],[8,12],[8,11],[8,10],[8,9],[9,8],[10,8],[11,8],[12,8],[13,8],[14,8],[14,7],[14,6],[13,6],[12,6],[11,6],[10,6],[9,6],[8,5],[8,4],[8,3],[8,2],[8,1],[8,0],[7,0]];
+// Entry points: where each color enters the main track
+const LD_ENTRY={R:39,B:13,G:26,Y:0};
+// Home stretches
+const LD_HOME={R:[[13,7],[12,7],[11,7],[10,7],[9,7]],B:[[1,7],[2,7],[3,7],[4,7],[5,7]],G:[[7,13],[7,12],[7,11],[7,10],[7,9]],Y:[[7,1],[7,2],[7,3],[7,4],[7,5]]};
+// Safe squares (path indices)
+const LD_SAFE=new Set([0,8,13,21,26,34,39,47]);
+// Base positions
+const LD_BASES={R:[[10,1],[10,3],[12,1],[12,3]],B:[[1,11],[1,13],[3,11],[3,13]],G:[[10,11],[10,13],[12,11],[12,13]],Y:[[1,1],[1,3],[3,1],[3,3]]};
+const LD_COLS={R:'#e53935',B:'#1565c0',G:'#2e7d32',Y:'#f9a825'};
+const LD_COLS_L={R:'#ffcdd2',B:'#bbdefb',G:'#c8e6c9',Y:'#fff9c4'};
+const LD_NAMES={R:'Red',B:'Blue',G:'Green',Y:'Yellow'};
+
+function ldInit(canvas,ctx,sz){
+  // Determine player list
+  let players;
+  if(G.mode==='online') players=['R','B'];
+  else if(G.mode==='ai') players=['R','B','G','Y']; // R=human, rest=AI
+  else players=(G.ludoCount===2)?['R','B']:['R','B','G','Y'];
+  LD={canvas,ctx,sz,players,tokens:{},turn:0,dice:[null,null],usedDice:[false,false],selDie:-1,phase:'roll',status:'playing',capturesThisTurn:0};
+  for(const p of players)LD.tokens[p]=Array(4).fill(null).map(()=>({steps:0}));
+  initDice();
+  document.getElementById('ludo-ui').style.display='flex';
+  document.getElementById('btn-roll').disabled=false;
+  document.getElementById('ludo-hint').textContent='Roll to start!';
+  document.getElementById('diceTotal').style.display='none';
+  document.getElementById('bonusBanner').style.display='none';
+  ldDraw();ldStatus();
+  canvas.removeEventListener('pointerdown',onLDPtr);
+  canvas.addEventListener('pointerdown',onLDPtr);
+}
+
+function ldTokenPos(color,token){
+  const s=token.steps;if(s===0||s>=57)return null;
+  if(s<=52){const entry=LD_ENTRY[color];const idx=(entry+s-1)%52;return LD_PATH[idx];}
+  return LD_HOME[color][s-53];
+}
+function ldDone(t){return t.steps>=57;}
+function ldAtHome(t){return t.steps===0;}
+function ldCanMoveWith(color,ti,dieVal){
+  const t=LD.tokens[color][ti];
+  if(ldDone(t))return false;
+  if(ldAtHome(t))return dieVal===6; // need 6 to exit
+  return t.steps+dieVal<=57;
+}
+function ldValidTokens(color,dieVal){return LD.tokens[color].map((_,i)=>i).filter(i=>ldCanMoveWith(color,i,dieVal));}
+function ldAnyUsable(color){
+  return LD.dice.some((d,i)=>!LD.usedDice[i]&&d&&ldValidTokens(color,d).length>0);
+}
+
+function ldRoll(){
+  if(LD.phase!=='roll'||LD.status!=='playing')return;
+  if(G.mode==='online'&&!G.opponentReady)return; // wait for handshake
+  if(G.mode==='online'&&((G.role==='host'&&LD.turn!==0)||(G.role==='guest'&&LD.turn!==1)))return;
+  const v1=1+Math.floor(Math.random()*6);
+  const v2=1+Math.floor(Math.random()*6);
+  if(G.mode==='online')send({type:'ludo-roll',v1,v2});
+  ldApplyDice(v1,v2);
+}
+
+function ldApplyDice(v1,v2){
+  LD.dice=[v1,v2];LD.usedDice=[false,false];LD.selDie=-1;LD.capturesThisTurn=0;
+  // RULE: ONLY double-6 grants a bonus turn. Single 6 = bring out token only.
+  const isD6=v1===6&&v2===6;
+  // Animate
+  const d1=document.getElementById('die1');const d2=document.getElementById('die2');
+  d1.classList.remove('shaking','active','used');d2.classList.remove('shaking','active','used');
+  void d1.offsetWidth;void d2.offsetWidth;
+  d1.classList.add('shaking');d2.classList.add('shaking');
+  snd('dice');
+  setTimeout(()=>{
+    d1.classList.remove('shaking');d2.classList.remove('shaking');
+    drawDie('die1',v1,isD6);drawDie('die2',v2,isD6);
+    snd('land');
+    if(isD6){snd('d6');unlockAch('double6');}
+    // Total display
+    const tot=document.getElementById('diceTotal');
+    tot.style.display='block';
+    if(isD6) tot.textContent=`🎰 DOUBLE 6! Play again after!`;
+    else if(v1===6||v2===6){const other=v1===6?v2:v1;tot.textContent=`⚡ Six! Bring out a token, then move ${other}`;}
+    else tot.textContent=`${v1} + ${v2} = ${v1+v2}`;
+    document.getElementById('btn-roll').disabled=true;
+    const banner=document.getElementById('bonusBanner');banner.style.display='none';
+    const color=LD.players[LD.turn];
+    // Check if ANY die can be used
+    const can1=ldValidTokens(color,v1).length>0;
+    const can2=ldValidTokens(color,v2).length>0;
+    if(!can1&&!can2){
+      document.getElementById('ludo-hint').textContent='No valid moves — next player';
+      setTimeout(()=>ldNextTurn(false),1100);
+      return;
+    }
+    LD.phase='move';
+    // Nigerian rule: if 6 rolled and tokens at home, auto-select the 6 die first
+    const hasAtHome=LD.tokens[color].some(t=>ldAtHome(t));
+    if(hasAtHome&&(v1===6||v2===6)){
+      if(v1===6)ldAutoSelectDie(0,color);
+      else ldAutoSelectDie(1,color);
+    } else {ldPromptDieSelect(color);}
+    ldDraw();
+  },580);
+}
+
+function ldAutoSelectDie(idx,color){
+  LD.selDie=idx;
+  updateDieVisuals(color);
+  document.getElementById('ludo-hint').textContent=`Tap a ${LD_NAMES[color]} token to move ${LD.dice[idx]}`;
+}
+function ldPromptDieSelect(color){
+  const can1=ldValidTokens(color,LD.dice[0]).length>0&&!LD.usedDice[0];
+  const can2=ldValidTokens(color,LD.dice[1]).length>0&&!LD.usedDice[1];
+  if(can1&&!can2){LD.selDie=0;}
+  else if(can2&&!can1){LD.selDie=1;}
+  else{LD.selDie=-1;}// player chooses
+  updateDieVisuals(color);
+  document.getElementById('ludo-hint').textContent=LD.selDie>=0?`Tap a ${LD_NAMES[color]} token to move ${LD.dice[LD.selDie]}`:`Select a die, then tap a token`;
+}
+function updateDieVisuals(color){
+  const d1=document.getElementById('die1');const d2=document.getElementById('die2');
+  d1.classList.remove('active','used');d2.classList.remove('active','used');
+  if(LD.usedDice[0])drawDie('die1',LD.dice[0],LD.dice[0]===6,true);
+  if(LD.usedDice[1])drawDie('die2',LD.dice[1],LD.dice[1]===6,true);
+  document.getElementById('die1').classList.toggle('used',LD.usedDice[0]);
+  document.getElementById('die2').classList.toggle('used',LD.usedDice[1]);
+  if(!LD.usedDice[0]&&LD.selDie===0)d1.classList.add('active');
+  if(!LD.usedDice[1]&&LD.selDie===1)d2.classList.add('active');
+}
+function selectDie(idx){
+  if(LD.phase!=='move'||LD.status!=='playing')return;
+  if(LD.usedDice[idx])return;
+  const color=LD.players[LD.turn];
+  if(ldValidTokens(color,LD.dice[idx]).length===0)return;
+  LD.selDie=idx;
+  updateDieVisuals(color);
+  document.getElementById('ludo-hint').textContent=`Tap a ${LD_NAMES[color]} token to move ${LD.dice[idx]}`;
+}
+
+function onLDPtr(e){
+  e.preventDefault();if(LD.phase!=='move'||LD.status!=='playing')return;
+  if(G.mode==='online'&&!G.opponentReady)return;
+  const color=LD.players[LD.turn];
+  if(G.mode==='online'&&((G.role==='host'&&LD.turn!==0)||(G.role==='guest'&&LD.turn!==1)))return;
+  if(G.mode==='ai'&&LD.players[LD.turn]!=='R')return;
+  if(LD.selDie<0){document.getElementById('ludo-hint').textContent='Select a die first!';return;}
+  const rect=LD.canvas.getBoundingClientRect();const sq=LD.sz/15;
+  const col=Math.floor((e.clientX-rect.left)/sq);const row=Math.floor((e.clientY-rect.top)/sq);
+  const dieVal=LD.dice[LD.selDie];
+  const valid=ldValidTokens(color,dieVal);
+  for(const ti of valid){
+    const t=LD.tokens[color][ti];
+    const pos=ldAtHome(t)?LD_BASES[color][ti]:ldTokenPos(color,t);
+    if(!pos)continue;
+    if(pos[0]===row&&pos[1]===col){
+      if(G.mode==='online')send({type:'ludo-move',ti,dieIdx:LD.selDie});
+      ldApplyMove(ti,LD.selDie);return;
+    }
+  }
+}
+
+function ldApplyMove(ti,dieIdx,fromNet=false){
+  const color=LD.players[LD.turn];const t=LD.tokens[color][ti];const dieVal=LD.dice[dieIdx];
+  LD.usedDice[dieIdx]=true;
+  let didCapture=false;
+  if(ldAtHome(t)){t.steps=1;} // enter board with the 6
+  else{
+    t.steps=Math.min(t.steps+dieVal,57);
+  }
+  snd('move');
+  // Capture check — sends enemy home, NO bonus turn from this
+  if(t.steps>0&&t.steps<=52){
+    const entry=LD_ENTRY[color];const myIdx=(entry+t.steps-1)%52;
+    if(!LD_SAFE.has(myIdx)){
+      for(const oc of LD.players){if(oc===color)continue;
+        for(const ot of LD.tokens[oc]){if(ldAtHome(ot)||ldDone(ot)||ot.steps>52)continue;const oEntry=LD_ENTRY[oc];const oIdx=(oEntry+ot.steps-1)%52;if(oIdx===myIdx){ot.steps=0;snd('capture');didCapture=true;LD.capturesThisTurn++;}}}
+    }
+  }
+  if(LD.capturesThisTurn>=5)unlockAch('killer');
+  ldDraw();
+  // Check win
+  if(LD.tokens[color].every(tk=>ldDone(tk))){LD.status='done';showWin(`${LD_NAMES[color]} Wins!`,'All tokens home!','🎲');document.getElementById('btn-roll').disabled=true;return;}
+  // Check if second die is still usable
+  const stillUsable=LD.dice.some((d,i)=>!LD.usedDice[i]&&d&&ldValidTokens(color,d).length>0);
+  if(stillUsable){ldPromptDieSelect(color);ldDraw();}
+  else{
+    // ONLY double-6 earns a bonus turn — nothing else
+    const isD6=LD.dice[0]===6&&LD.dice[1]===6;
+    ldNextTurn(isD6);
+  }
+}
+
+function ldNextTurn(extraTurn){
+  if(extraTurn){
+    document.getElementById('bonusBanner').textContent='🎰 DOUBLE 6 — Play again!';
+    document.getElementById('bonusBanner').style.display='block';
+    setTimeout(()=>{document.getElementById('bonusBanner').style.display='none';},1600);
+    // same player rolls again — DON'T advance turn
+  } else {
+    LD.turn=(LD.turn+1)%LD.players.length;
+  }
+  LD.dice=[null,null];LD.usedDice=[false,false];LD.selDie=-1;LD.phase='roll';LD.capturesThisTurn=0;
+  drawDie('die1',1);drawDie('die2',1);
+  document.getElementById('diceTotal').style.display='none';
+  if(!extraTurn)document.getElementById('bonusBanner').style.display='none';
+  document.getElementById('die1').classList.remove('active','used');
+  document.getElementById('die2').classList.remove('active','used');
+  document.getElementById('ludo-hint').textContent='';
+  const myTurn=G.mode==='local'||(G.mode==='ai'&&LD.players[LD.turn]==='R')||(G.role==='host'&&LD.turn===0)||(G.role==='guest'&&LD.turn===1);
+  document.getElementById('btn-roll').disabled=!myTurn;
+  ldDraw();ldStatus();
+  if(G.mode==='ai'&&LD.players[LD.turn]!=='R')setTimeout(ldAI,extraTurn?900:700);
+}
+function ldStatus(){const c=LD.players[LD.turn];setTurn(`<b style="color:${LD_COLS[c]}">${LD_NAMES[c]}'s turn</b>${G.mode==='ai'&&c!=='R'?' 🤖':''}`);}
+
+// Ludo AI
+function ldAI(){
+  if(LD.status!=='playing'||LD.players[LD.turn]==='R')return;
+  // Roll
+  const v1=1+Math.floor(Math.random()*6);const v2=1+Math.floor(Math.random()*6);
+  ldApplyDice(v1,v2);
+  // After dice, auto-move after a delay
+  setTimeout(()=>{if(LD.phase==='move')ldAIChoose();},800);
+}
+function ldAIChoose(){
+  const color=LD.players[LD.turn];
+  // Find best die-token combo
+  for(let dieIdx=0;dieIdx<2;dieIdx++){
+    if(LD.usedDice[dieIdx])continue;
+    const dieVal=LD.dice[dieIdx];if(!dieVal)continue;
+    const valid=ldValidTokens(color,dieVal);if(!valid.length)continue;
+    // Priority: capture, then nearest home, then enter board
+    let best=null,bestScore=-Infinity;
+    for(const ti of valid){
+      const t=LD.tokens[color][ti];let score=0;
+      if(ldAtHome(t))score=10;
+      else{
+        const pos=ldTokenPos(color,t);if(!pos)continue;
+        // Check capture
+        for(const oc of LD.players){if(oc===color)continue;for(const ot of LD.tokens[oc]){if(ldAtHome(ot)||ldDone(ot))continue;const oPos=ldTokenPos(oc,ot);if(oPos&&oPos[0]===pos[0]&&oPos[1]===pos[1]){score=100;}}}
+        score+=t.steps;
+      }
+      if(score>bestScore){bestScore=score;best=ti;}
+    }
+    if(best!=null){LD.selDie=dieIdx;ldApplyMove(best,dieIdx,false);setTimeout(()=>{if(LD.phase==='move')ldAIChoose();},600);return;}
+  }
+}
+
+// Ludo draw
+function ldDraw(){
+  const{ctx,sz}=LD;const sq=sz/15;ctx.clearRect(0,0,sz,sz);
+  ctx.fillStyle='#f5f0e0';ctx.fillRect(0,0,sz,sz);
+  // Corner zones: R=bottom-left, Y=top-left, B=top-right, G=bottom-right
+  [{r:9,c:0,col:'R'},{r:0,c:9,col:'B'},{r:9,c:9,col:'G'},{r:0,c:0,col:'Y'}].forEach(({r,c,col})=>{
+    ctx.fillStyle=LD_COLS_L[col];ctx.fillRect(c*sq,r*sq,6*sq,6*sq);
+    ctx.fillStyle=LD_COLS[col];ctx.fillRect((c+1)*sq,(r+1)*sq,4*sq,4*sq);
+  });
+  ctx.fillStyle='#fff';ctx.fillRect(6*sq,0,3*sq,6*sq);ctx.fillRect(0,6*sq,6*sq,3*sq);ctx.fillRect(9*sq,6*sq,6*sq,3*sq);ctx.fillRect(6*sq,9*sq,3*sq,6*sq);
+  ctx.strokeStyle='#ddd';ctx.lineWidth=.4;
+  for(let i=0;i<=15;i++){ctx.beginPath();ctx.moveTo(i*sq,0);ctx.lineTo(i*sq,sz);ctx.stroke();ctx.beginPath();ctx.moveTo(0,i*sq);ctx.lineTo(sz,i*sq);ctx.stroke();}
+  // Home stretches
+  [{sq2:[[13,7],[12,7],[11,7],[10,7],[9,7]],c:'R'},{sq2:[[1,7],[2,7],[3,7],[4,7],[5,7]],c:'B'},{sq2:[[7,13],[7,12],[7,11],[7,10],[7,9]],c:'G'},{sq2:[[7,1],[7,2],[7,3],[7,4],[7,5]],c:'Y'}].forEach(({sq2,c})=>{sq2.forEach(([r2,c2])=>{ctx.fillStyle=LD_COLS_L[c];ctx.fillRect(c2*sq,r2*sq,sq,sq);});});
+  // Center triangles
+  const cx=7.5*sq,cy=7.5*sq;
+  [[LD_COLS.R,[9,6],[9,9]],[LD_COLS.B,[6,6],[6,9]],[LD_COLS.G,[6,9],[9,9]],[LD_COLS.Y,[6,6],[9,6]]].forEach(([col,[r1,c1],[r2,c2]])=>{ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(c1*sq,r1*sq);ctx.lineTo(c2*sq,r2*sq);ctx.closePath();ctx.fill();});
+  // Stars
+  ctx.fillStyle='rgba(0,0,0,.14)';ctx.font=`${sq*.46}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';
+  for(const idx of LD_SAFE){const[r2,c2]=LD_PATH[idx];ctx.fillText('★',c2*sq+sq/2,r2*sq+sq/2);}
+  // Start dots
+  for(const[col,bases]of Object.entries(LD_BASES)){if(!LD.players.includes(col))continue;for(const[br,bc]of bases){ctx.fillStyle='rgba(255,255,255,.6)';ctx.beginPath();ctx.arc(bc*sq+sq/2,br*sq+sq/2,sq*.33,0,Math.PI*2);ctx.fill();ctx.strokeStyle='rgba(0,0,0,.1)';ctx.lineWidth=1;ctx.stroke();}}
+  // Count tokens per cell
+  const tokenCount={};const drawn={};
+  const OFS=[[-.22,-.22],[.22,-.22],[-.22,.22],[.22,.22]];
+  for(const col of LD.players)for(let ti=0;ti<4;ti++){const t=LD.tokens[col][ti];if(ldDone(t))continue;const pos=ldAtHome(t)?LD_BASES[col][ti]:ldTokenPos(col,t);if(!pos)continue;const k=pos[0]+','+pos[1];tokenCount[k]=(tokenCount[k]||0)+1;}
+  for(const col of LD.players){
+    const color2=LD.players[LD.turn];
+    for(let ti=0;ti<4;ti++){
+      const t=LD.tokens[col][ti];if(ldDone(t))continue;
+      const pos=ldAtHome(t)?LD_BASES[col][ti]:ldTokenPos(col,t);if(!pos)continue;
+      const[r2,c2]=pos;const k=r2+','+c2;drawn[k]=(drawn[k]||0);
+      const cnt=tokenCount[k];const oi=drawn[k];drawn[k]++;
+      const offX=cnt>1?(OFS[oi]?.[0]||0)*sq*.38:0;const offY=cnt>1?(OFS[oi]?.[1]||0)*sq*.38:0;
+      const tx=c2*sq+sq/2+offX,ty=r2*sq+sq/2+offY;const rad=sq*.3;
+      const isValid=LD.phase==='move'&&col===color2&&LD.selDie>=0&&ldValidTokens(col,LD.dice[LD.selDie]).includes(ti);
+      if(isValid){ctx.shadowColor=LD_COLS[col];ctx.shadowBlur=16;}
+      const g2=ctx.createRadialGradient(tx-rad*.3,ty-rad*.3,rad*.1,tx,ty,rad);g2.addColorStop(0,LD_COLS_L[col]);g2.addColorStop(1,LD_COLS[col]);
+      ctx.fillStyle=g2;ctx.beginPath();ctx.arc(tx,ty,rad,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle='rgba(255,255,255,.7)';ctx.lineWidth=1.5;ctx.stroke();ctx.shadowBlur=0;
+      ctx.fillStyle='rgba(0,0,0,.75)';ctx.font=`bold ${sq*.2}px Outfit`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(ti+1,tx,ty);
+    }
+  }
+  ctx.strokeStyle='#bbb';ctx.lineWidth=1.5;ctx.strokeRect(0,0,sz,sz);
+}
+
+// ════════════════════════════════════════════════
+//  MENU PREVIEWS
+// ════════════════════════════════════════════════
+function drawChessPreview(canvas){const ctx=canvas.getContext('2d');const sz=canvas.width;const sq=sz/8;const B=[['bR','bN','bB','bQ','bK','bB','bN','bR'],['bP','bP','bP','bP','bP','bP','bP','bP'],[,,,,,,,,],[,,,,,,,,],[,,,,,,,,],[,,,,,,,,],['wP','wP','wP','wP','wP','wP','wP','wP'],['wR','wN','wB','wQ','wK','wB','wN','wR']];for(let r=0;r<8;r++)for(let c=0;c<8;c++){ctx.fillStyle=(r+c)%2===0?'#f0d9b5':'#b58863';ctx.fillRect(c*sq,r*sq,sq,sq);const p=B[r][c];if(p){ctx.font=`${sq*.74}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle=p[0]==='w'?'#fff':'#111';ctx.fillText(CP[p],c*sq+sq/2,r*sq+sq/2);}}}
+function drawCKPreview(canvas){const ctx=canvas.getContext('2d');const sz=canvas.width;const sq=sz/8;const B=ckNewBoard();for(let r=0;r<8;r++)for(let c=0;c<8;c++){ctx.fillStyle=(r+c)%2===1?'#5d4037':'#efebe9';ctx.fillRect(c*sq,r*sq,sq,sq);const p=B[r][c];if(p){ctx.fillStyle=p.c==='r'?'#e53935':'#212121';ctx.beginPath();ctx.arc(c*sq+sq/2,r*sq+sq/2,sq*.35,0,Math.PI*2);ctx.fill();ctx.strokeStyle='rgba(255,255,255,.25)';ctx.lineWidth=1;ctx.stroke();}}}
+function drawLudoPreview(canvas){const ctx=canvas.getContext('2d');const sz=canvas.width;const sq=sz/15;ctx.fillStyle='#f5f0e0';ctx.fillRect(0,0,sz,sz);[{r:9,c:0,col:'R'},{r:0,c:9,col:'B'},{r:9,c:9,col:'G'},{r:0,c:0,col:'Y'}].forEach(({r,c,col})=>{ctx.fillStyle=LD_COLS_L[col];ctx.fillRect(c*sq,r*sq,6*sq,6*sq);ctx.fillStyle=LD_COLS[col];ctx.fillRect((c+1)*sq,(r+1)*sq,4*sq,4*sq);});ctx.fillStyle='#fff';ctx.fillRect(6*sq,0,3*sq,6*sq);ctx.fillRect(0,6*sq,6*sq,3*sq);ctx.fillRect(9*sq,6*sq,6*sq,3*sq);ctx.fillRect(6*sq,9*sq,3*sq,6*sq);const cx2=7.5*sq,cy2=7.5*sq;[[LD_COLS.R,[9,6],[9,9]],[LD_COLS.B,[6,6],[6,9]],[LD_COLS.G,[6,9],[9,9]],[LD_COLS.Y,[6,6],[9,6]]].forEach(([col,[r1,c1],[r2,c2]])=>{ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(cx2,cy2);ctx.lineTo(c1*sq,r1*sq);ctx.lineTo(c2*sq,r2*sq);ctx.closePath();ctx.fill();});}
+
+function buildMenu(){
+  const grid=document.getElementById('gameGrid');grid.innerHTML='';
+  [{id:'chess',name:'Chess',desc:'Full rules: castling, en passant, promotion, check & checkmate. Move notation log included.',tags:['Strategy','AI Available'],draw:drawChessPreview,psz:160},{id:'checkers',name:'Checkers',desc:'Mandatory captures, multi-jumps, kinging & advanced AI — proper draughts rules.',tags:['Classic','AI Available'],draw:drawCKPreview,psz:160},{id:'ludo',name:'Ludo',desc:'Nigerian rules: 2 dice, use 6 to enter, split moves, captures send home — extra rolls for sixes & captures!',tags:['Nigerian Rules','2–4 Players'],draw:drawLudoPreview,psz:210}].forEach(g=>{
+    const div=document.createElement('div');div.className='game-card';div.onclick=()=>pickGame(g.id);
+    const pw=document.createElement('div');pw.className='card-canvas-wrap';
+    const c=document.createElement('canvas');c.width=g.psz;c.height=g.psz;c.style.cssText=`width:${g.psz}px;height:${g.psz}px;pointer-events:none`;g.draw(c);
+    const ov=document.createElement('div');ov.className='card-ov';
+    pw.appendChild(c);pw.appendChild(ov);
+    const body=document.createElement('div');body.className='card-body';
+    body.innerHTML=`<div class="card-name">${g.name}</div><div class="card-desc">${g.desc}</div><div class="card-tags">${g.tags.map((t,i)=>`<span class="tag ${i===0?'hi':''}">${t}</span>`).join('')}</div>`;
+    div.appendChild(pw);div.appendChild(body);grid.appendChild(div);
+  });
+}
+
+window.addEventListener('resize',()=>{
+  if(!document.getElementById('s-game').classList.contains('active'))return;
+  const canvas=document.getElementById('gameCanvas');const body=document.querySelector('.game-body');const br=body.getBoundingClientRect();
+  const extraH=G.game==='ludo'?115:0;const logW=G.game==='chess'?110:0;
+  const sz=Math.max(Math.min(br.width-20-logW,br.height-20-extraH,660),200);
+  DPR=window.devicePixelRatio||1;canvas.style.width=sz+'px';canvas.style.height=sz+'px';canvas.width=Math.round(sz*DPR);canvas.height=Math.round(sz*DPR);
+  const ctx=canvas.getContext('2d');ctx.scale(DPR,DPR);
+  if(G.game==='chess'){CH.sz=sz;CH.canvas=canvas;CH.ctx=ctx;chessDraw();}
+  else if(G.game==='checkers'){CK.sz=sz;CK.canvas=canvas;CK.ctx=ctx;ckDraw();}
+  else if(G.game==='ludo'){LD.sz=sz;LD.canvas=canvas;LD.ctx=ctx;ldDraw();}
+});
+
+// ── INIT ──
+buildMenu();
+renderProfiles();
+renderHistory();
+renderAchievements();
+initDice();
+checkDailyBonus();
+</script>
+</body>
+</html>
