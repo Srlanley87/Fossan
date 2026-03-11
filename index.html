@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>FOSSAN Voter Registration 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc, serverTimestamp }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  // ═══════════════════════════════════════════
+  // 🔥 YOUR FIREBASE CONFIG (already filled in)
+  // ═══════════════════════════════════════════
+  const firebaseConfig = {
+    apiKey: "AIzaSyCaRvUuvW9TyNUV7YLd0EXa8J0PS28V1BY",
+    authDomain: "fossan-election-2026.firebaseapp.com",
+    projectId: "fossan-election-2026",
+    storageBucket: "fossan-election-2026.firebasestorage.app",
+    messagingSenderId: "709609989065",
+    appId: "1:709609989065:web:7dd69dc5e9909da69a3e18"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db  = getFirestore(app);
+  window._db = db;
+  window._fs = { doc, setDoc, getDoc, collection, getDocs, deleteDoc, serverTimestamp };
+  window.firebaseReady = true;
+
+  window.addEventListener('DOMContentLoaded', () => window.bootApp());
+</script>
+
+<style>
+:root{
+  --g:#00b341; --y:#FFD600; --r:#E8000D;
+  --bg:#080c10; --card:#0f1923; --card2:#162032;
+  --border:rgba(255,255,255,0.07); --muted:#6b7a8d;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{
+  font-family:'Nunito',sans-serif;
+  background:var(--bg);min-height:100vh;
+  color:#e8edf2;overflow-x:hidden;
+}
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(ellipse 60% 50% at 0% 0%,rgba(0,179,65,.12) 0%,transparent 60%),
+    radial-gradient(ellipse 50% 40% at 100% 100%,rgba(255,214,0,.08) 0%,transparent 60%),
+    radial-gradient(ellipse 40% 60% at 50% 50%,rgba(232,0,13,.05) 0%,transparent 60%);
+}
+
+/* ── GRID PATTERN ── */
+body::after{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:linear-gradient(rgba(255,255,255,.02) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.02) 1px,transparent 1px);
+  background-size:50px 50px;
+}
+
+.wrap{max-width:600px;margin:0 auto;padding:0 16px 80px;position:relative;z-index:1;}
+
+/* ── HEADER ── */
+.header{text-align:center;padding:48px 20px 32px;}
+.pill{
+  display:inline-flex;align-items:center;gap:8px;
+  background:rgba(0,179,65,.12);border:1px solid rgba(0,179,65,.3);
+  color:var(--g);font-size:11px;font-weight:900;letter-spacing:3px;
+  text-transform:uppercase;padding:7px 20px;border-radius:100px;margin-bottom:20px;
+}
+.header h1{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(52px,13vw,88px);line-height:.9;letter-spacing:3px;
+  background:linear-gradient(160deg,#fff 0%,#FFD600 50%,#00b341 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  margin-bottom:12px;
+}
+.header h2{
+  font-family:'Bebas Neue',sans-serif;font-size:clamp(22px,5vw,32px);
+  color:rgba(255,255,255,.4);letter-spacing:4px;margin-bottom:14px;
+}
+.header p{color:var(--muted);font-size:14px;font-weight:700;line-height:1.6;}
+
+.flag{display:flex;height:5px;border-radius:100px;overflow:hidden;margin:24px 0;}
+.flag span{flex:1;}
+.flag span:nth-child(1){background:var(--g);}
+.flag span:nth-child(2){background:#fff;}
+.flag span:nth-child(3){background:var(--g);}
+
+/* ── SCREENS ── */
+.screen{display:none;}
+.screen.on{display:block;animation:rise .4s ease;}
+@keyframes rise{from{opacity:0;transform:translateY(18px);}to{opacity:1;transform:translateY(0);}}
+
+/* ── CARD ── */
+.card{
+  background:linear-gradient(160deg,var(--card),var(--card2));
+  border:1px solid var(--border);border-radius:24px;
+  padding:32px 28px;margin-bottom:16px;
+  box-shadow:0 16px 56px rgba(0,0,0,.5);
+}
+
+/* ── STEPS INDICATOR ── */
+.steps{display:flex;align-items:center;justify-content:center;gap:0;margin-bottom:32px;}
+.step-dot{
+  width:36px;height:36px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Bebas Neue',sans-serif;font-size:16px;
+  border:2px solid rgba(255,255,255,.1);color:var(--muted);
+  transition:all .3s;position:relative;z-index:1;background:var(--card);
+}
+.step-dot.done{background:var(--g);border-color:var(--g);color:#000;}
+.step-dot.active{background:var(--y);border-color:var(--y);color:#000;}
+.step-line{width:50px;height:2px;background:rgba(255,255,255,.08);}
+.step-line.done{background:var(--g);}
+
+/* ── FORM ── */
+.form-title{
+  font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:1px;
+  margin-bottom:6px;
+}
+.form-sub{font-size:13px;color:var(--muted);font-weight:700;margin-bottom:24px;line-height:1.6;}
+
+.field{margin-bottom:16px;}
+.field label{
+  display:flex;align-items:center;gap:8px;
+  font-size:11px;font-weight:900;text-transform:uppercase;
+  letter-spacing:1.5px;color:var(--muted);margin-bottom:8px;
+}
+.field label .ico{font-size:14px;}
+.field input,.field select{
+  width:100%;background:rgba(255,255,255,.05);
+  border:1.5px solid rgba(255,255,255,.09);
+  border-radius:13px;padding:14px 16px;color:#fff;
+  font-family:'Nunito',sans-serif;font-size:15px;font-weight:700;
+  outline:none;transition:all .2s;
+}
+.field input:focus,.field select:focus{
+  border-color:var(--y);background:rgba(255,214,0,.05);
+  box-shadow:0 0 0 4px rgba(255,214,0,.08);
+}
+.field input::placeholder{color:#2e3d4f;font-weight:600;}
+
+/* ── PRIVACY NOTE ── */
+.privacy-note{
+  background:rgba(0,179,65,.08);border:1.5px solid rgba(0,179,65,.2);
+  border-radius:14px;padding:16px 18px;margin-bottom:20px;
+  display:flex;gap:12px;align-items:flex-start;
+}
+.privacy-note .lock{font-size:22px;flex-shrink:0;margin-top:2px;}
+.privacy-note p{font-size:13px;color:#aaa;font-weight:700;line-height:1.7;}
+.privacy-note strong{color:var(--g);}
+
+/* ── BUTTONS ── */
+.btn{
+  width:100%;padding:16px;border-radius:14px;
+  font-family:'Nunito',sans-serif;font-size:16px;font-weight:900;
+  cursor:pointer;border:none;transition:all .2s;
+  text-transform:uppercase;letter-spacing:1.5px;margin-top:8px;
+}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none!important;}
+.btn-green{
+  background:linear-gradient(135deg,var(--g),#00d94f);color:#000;
+  box-shadow:0 6px 28px rgba(0,179,65,.35);
+}
+.btn-green:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 10px 36px rgba(0,179,65,.5);}
+.btn-yellow{
+  background:linear-gradient(135deg,var(--y),#ffaa00);color:#000;
+  box-shadow:0 6px 28px rgba(255,214,0,.3);
+}
+.btn-yellow:hover:not(:disabled){transform:translateY(-2px);}
+.btn-ghost{
+  background:transparent;border:1.5px solid var(--border);
+  color:var(--muted);margin-top:10px;
+}
+.btn-ghost:hover{border-color:rgba(255,255,255,.2);color:#fff;}
+.btn-sm{padding:10px 20px;font-size:13px;border-radius:10px;width:auto;}
+
+.err{color:#ff5555;font-size:13px;font-weight:800;margin-top:10px;display:none;}
+
+/* ── SUCCESS ── */
+.success-wrap{text-align:center;padding:40px 20px;}
+.check-circle{
+  width:110px;height:110px;
+  background:linear-gradient(135deg,var(--g),#00d94f);
+  border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:52px;margin:0 auto 24px;
+  animation:glow 2s infinite;
+}
+@keyframes glow{
+  0%,100%{box-shadow:0 0 40px rgba(0,179,65,.4);}
+  50%{box-shadow:0 0 80px rgba(0,179,65,.7);}
+}
+.success-wrap h2{
+  font-family:'Bebas Neue',sans-serif;font-size:52px;
+  background:linear-gradient(135deg,#fff,var(--y));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;margin-bottom:10px;
+}
+.success-wrap p{color:var(--muted);font-size:15px;font-weight:700;line-height:1.8;}
+.reg-code{
+  background:rgba(255,214,0,.08);border:2px solid rgba(255,214,0,.3);
+  border-radius:16px;padding:18px 24px;margin:20px auto;max-width:280px;
+}
+.reg-code span{display:block;font-size:10px;font-weight:900;letter-spacing:3px;color:var(--y);text-transform:uppercase;margin-bottom:6px;}
+.reg-code strong{font-size:20px;font-weight:900;letter-spacing:4px;color:#fff;}
+
+.detail-box{
+  background:rgba(255,255,255,.04);border:1px solid var(--border);
+  border-radius:14px;padding:16px 20px;margin:16px 0;text-align:left;
+}
+.detail-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05);}
+.detail-row:last-child{border-bottom:none;}
+.detail-row .lbl{font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:1px;color:var(--muted);}
+.detail-row .val{font-size:14px;font-weight:800;color:#fff;}
+
+/* ── ALREADY REGISTERED ── */
+.already-wrap{text-align:center;padding:40px 20px;}
+.already-wrap .ico{font-size:72px;margin-bottom:16px;}
+.already-wrap h2{font-family:'Bebas Neue',sans-serif;font-size:42px;color:var(--y);margin-bottom:10px;}
+.already-wrap p{color:var(--muted);font-size:15px;font-weight:700;line-height:1.7;}
+
+/* ── LOADING ── */
+.overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:999;
+  display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+}
+.spin{
+  width:52px;height:52px;border:4px solid rgba(255,255,255,.08);
+  border-top-color:var(--g);border-radius:50%;animation:rot .75s linear infinite;
+}
+@keyframes rot{to{transform:rotate(360deg);}}
+.overlay p{font-weight:800;color:var(--muted);font-size:14px;}
+
+/* ── ADMIN ── */
+.admin-bar{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-bottom:22px;flex-wrap:wrap;gap:10px;
+}
+.admin-bar h2{font-family:'Bebas Neue',sans-serif;font-size:34px;color:var(--y);}
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px;}
+.stat{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:14px;padding:16px;text-align:center;}
+.stat .num{font-family:'Bebas Neue',sans-serif;font-size:40px;color:var(--g);line-height:1;}
+.stat .lbl{font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-top:4px;}
+
+.tbl-wrap{overflow-x:auto;border-radius:14px;border:1px solid var(--border);}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+th{text-align:left;padding:11px 14px;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:1.5px;border-bottom:1px solid var(--border);background:rgba(255,255,255,.03);}
+td{padding:11px 14px;border-bottom:1px solid rgba(255,255,255,.04);font-weight:700;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:rgba(255,255,255,.02);}
+
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:900;padding:3px 10px;border-radius:100px;}
+.badge-green{background:rgba(0,179,65,.15);color:var(--g);}
+.badge-yellow{background:rgba(255,214,0,.12);color:var(--y);}
+
+.export-btn{
+  background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;
+  padding:11px 20px;border-radius:10px;font-size:13px;font-weight:900;
+  cursor:pointer;border:none;text-transform:uppercase;letter-spacing:1px;
+  transition:all .2s;
+}
+.export-btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(124,58,237,.4);}
+
+.del-btn{
+  background:rgba(232,0,13,.12);border:1px solid rgba(232,0,13,.2);
+  color:#ff5555;padding:5px 12px;border-radius:8px;font-size:11px;
+  font-weight:900;cursor:pointer;transition:all .2s;
+}
+.del-btn:hover{background:rgba(232,0,13,.25);}
+
+.search-wrap{position:relative;margin-bottom:16px;}
+.search-wrap input{
+  width:100%;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.09);
+  border-radius:12px;padding:12px 16px 12px 42px;color:#fff;
+  font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;outline:none;
+  transition:all .2s;
+}
+.search-wrap input:focus{border-color:var(--y);}
+.search-wrap .si{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:16px;}
+
+/* ── ADMIN LOGIN ── */
+.admin-login{text-align:center;padding:10px 0 20px;}
+.admin-login .ico{font-size:52px;margin-bottom:16px;}
+.admin-login h3{font-family:'Bebas Neue',sans-serif;font-size:30px;color:var(--y);margin-bottom:6px;}
+.admin-login p{color:var(--muted);font-size:13px;font-weight:700;margin-bottom:20px;}
+
+/* ── TIMER ── */
+.timer-wrap{text-align:center;padding:40px 20px;}
+.timer-wrap .t-icon{font-size:72px;margin-bottom:16px;}
+.timer-wrap h2{font-family:'Bebas Neue',sans-serif;font-size:46px;margin-bottom:10px;}
+.timer-wrap p{color:var(--muted);font-size:15px;font-weight:700;line-height:1.8;}
+.countdown-box{
+  display:flex;justify-content:center;gap:12px;margin:24px 0;flex-wrap:wrap;
+}
+.count-unit{
+  background:rgba(255,255,255,.05);border:1px solid var(--border);
+  border-radius:14px;padding:16px 20px;min-width:70px;text-align:center;
+}
+.count-unit .num{font-family:'Bebas Neue',sans-serif;font-size:42px;color:var(--y);line-height:1;}
+.count-unit .lbl{font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-top:4px;}
+.open-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  background:rgba(0,179,65,.15);border:1.5px solid rgba(0,179,65,.3);
+  color:var(--g);font-size:13px;font-weight:900;padding:8px 20px;
+  border-radius:100px;margin-bottom:16px;letter-spacing:1px;
+}
+.closed-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  background:rgba(232,0,13,.12);border:1.5px solid rgba(232,0,13,.3);
+  color:#ff5555;font-size:13px;font-weight:900;padding:8px 20px;
+  border-radius:100px;margin-bottom:16px;letter-spacing:1px;
+}
+.soon-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  background:rgba(255,214,0,.12);border:1.5px solid rgba(255,214,0,.3);
+  color:var(--y);font-size:13px;font-weight:900;padding:8px 20px;
+  border-radius:100px;margin-bottom:16px;letter-spacing:1px;
+}
+
+/* ── COUNTER ── */
+.reg-counter{
+  position:fixed;bottom:20px;right:20px;
+  background:rgba(0,179,65,.15);border:1.5px solid rgba(0,179,65,.3);
+  border-radius:100px;padding:8px 16px;
+  font-size:12px;font-weight:900;color:var(--g);
+  z-index:10;display:flex;align-items:center;gap:6px;
+}
+
+@media(max-width:480px){
+  .card{padding:22px 16px;}
+  .stats-row{grid-template-columns:1fr 1fr;}
+}
+</style>
+</head>
+<body>
+
+<!-- Loading -->
+<div class="overlay" id="overlay">
+  <div class="spin"></div>
+  <p id="overlayTxt">Please wait...</p>
+</div>
+
+<!-- Live counter -->
+<div class="reg-counter" id="regCounter" style="display:none;">
+  👥 <span id="counterNum">0</span> Registered
+</div>
+
+<div class="wrap">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="pill">📋 Voter Registration Portal · 2026</div>
+    <h1>FOSSAN</h1>
+    <h2>ELECTION 2026</h2>
+    <p>Register below to be eligible to vote.<br/>Your details are private — only the Electoral Committee can see them.</p>
+  </div>
+  <div class="flag"><span></span><span></span><span></span></div>
+
+  <!-- ═══════════════════════════════
+       SCREEN: NOT OPEN YET
+  ═══════════════════════════════ -->
+  <div class="screen" id="s-notopen">
+    <div class="card">
+      <div class="timer-wrap">
+        <div class="t-icon">⏳</div>
+        <div class="soon-badge">🟡 Registration Opening Soon</div>
+        <h2 style="color:var(--y);">Registration Not Open Yet!</h2>
+        <p>Voter registration for the FOSSAN Election 2026<br/>will open on:</p>
+        <p style="color:#fff;font-weight:900;font-size:18px;margin:12px 0;">📅 Wednesday 11th March 2026 at 9:00 AM</p>
+        <p>Please check back then. Registration closes on<br/><strong style="color:#ff5555;">15th March 2026 at 10:00 PM</strong></p>
+        <div class="countdown-box">
+          <div class="count-unit"><div class="num" id="pre-d">00</div><div class="lbl">Days</div></div>
+          <div class="count-unit"><div class="num" id="pre-h">00</div><div class="lbl">Hours</div></div>
+          <div class="count-unit"><div class="num" id="pre-m">00</div><div class="lbl">Mins</div></div>
+          <div class="count-unit"><div class="num" id="pre-s">00</div><div class="lbl">Secs</div></div>
+        </div>
+        <p style="font-size:13px;color:#3a4a5a;">until registration opens</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════
+       SCREEN: REGISTRATION CLOSED
+  ═══════════════════════════════ -->
+  <div class="screen" id="s-closed">
+    <div class="card">
+      <div class="timer-wrap">
+        <div class="t-icon">🔒</div>
+        <div class="closed-badge">🔴 Registration Closed</div>
+        <h2 style="color:#ff5555;">Registration is Closed!</h2>
+        <p>Voter registration for the FOSSAN Election 2026<br/>closed on:</p>
+        <p style="color:#ff5555;font-weight:900;font-size:18px;margin:12px 0;">📅 15th March 2026 at 10:00 PM</p>
+        <p style="font-size:13px;color:#3a4a5a;margin-top:16px;">If you did not register, contact the<br/>Electoral Committee for assistance.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════
+       SCREEN: REGISTRATION FORM
+  ═══════════════════════════════ -->
+  <div class="screen" id="s-form">
+
+    <!-- Steps -->
+    <div class="steps">
+      <div class="step-dot active" id="sd1">1</div>
+      <div class="step-line" id="sl1"></div>
+      <div class="step-dot" id="sd2">2</div>
+      <div class="step-line" id="sl2"></div>
+      <div class="step-dot" id="sd3">3</div>
+    </div>
+
+    <div class="card">
+      <div class="form-title">Personal Details</div>
+      <div class="form-sub">Enter your details exactly as they appear on your student ID. All fields are required.</div>
+
+      <div class="privacy-note">
+        <div class="lock">🔒</div>
+        <p>Your details are <strong>100% private</strong>. Only the Electoral Committee Admin can see submitted registrations. No other student can view your information.</p>
+      </div>
+
+      <div class="field">
+        <label><span class="ico">👤</span> Full Name</label>
+        <input type="text" id="f-name" placeholder="e.g. Chukwuemeka Obi" autocomplete="name"/>
+      </div>
+
+      <div class="field">
+        <label><span class="ico">📧</span> Email Address</label>
+        <input type="email" id="f-email" placeholder="e.g. student@university.edu.ng" autocomplete="email"/>
+      </div>
+
+      <div class="field">
+        <label><span class="ico">🎓</span> Registration Number</label>
+        <input type="text" id="f-reg" placeholder="e.g. 2021/12345"/>
+      </div>
+
+      <div class="field">
+        <label><span class="ico">📅</span> Level</label>
+        <select id="f-level">
+          <option value="">-- Select your level --</option>
+          <option value="200L">200 Level</option>
+          <option value="300L">300 Level</option>
+        </select>
+      </div>
+
+      <div class="err" id="err-form">⚠ Please fill in all fields correctly.</div>
+      <button class="btn btn-green" onclick="submitRegistration()">Register to Vote →</button>
+      <button class="btn btn-ghost" onclick="showAdminLogin()">Admin Access</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════
+       SCREEN: ALREADY REGISTERED
+  ═══════════════════════════════ -->
+  <div class="screen" id="s-already">
+    <div class="card">
+      <div class="already-wrap">
+        <div class="ico">✅</div>
+        <h2>Already Registered!</h2>
+        <p>Your registration number <span style="color:var(--y);font-weight:900;" id="dup-reg"></span> is already in our system.<br/><br/>You are eligible to vote on election day.<br/>No need to register again!</p>
+        <button class="btn btn-yellow" style="margin-top:24px;max-width:280px;" onclick="showScreen('s-form')">← Go Back</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════
+       SCREEN: SUCCESS
+  ═══════════════════════════════ -->
+  <div class="screen" id="s-success">
+    <div class="card">
+      <div class="success-wrap">
+        <div class="check-circle">✓</div>
+        <h2>Registered!</h2>
+        <p>You have been successfully registered.<br/>Keep your details safe for election day.</p>
+
+        <div class="detail-box">
+          <div class="detail-row">
+            <span class="lbl">Name</span>
+            <span class="val" id="suc-name"></span>
+          </div>
+          <div class="detail-row">
+            <span class="lbl">Email</span>
+            <span class="val" id="suc-email" style="font-size:12px;"></span>
+          </div>
+          <div class="detail-row">
+            <span class="lbl">Reg Number</span>
+            <span class="val" id="suc-reg" style="color:var(--y);"></span>
+          </div>
+          <div class="detail-row">
+            <span class="lbl">Level</span>
+            <span class="val" id="suc-level"></span>
+          </div>
+        </div>
+
+        <div class="reg-code">
+          <span>Registration Code</span>
+          <strong id="suc-code"></strong>
+        </div>
+
+        <p style="font-size:13px;color:#2e3d4f;margin-top:10px;line-height:1.8;">
+          📸 Screenshot this page as proof of registration.<br/>
+          On election day, use your <strong style="color:var(--y)">Name + Email + Reg Number</strong> to vote.<br/>
+          <strong style="color:#ff5555;">Do NOT share your details with anyone!</strong>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════
+       SCREEN: ADMIN LOGIN
+  ═══════════════════════════════ -->
+  <div class="screen" id="s-admin-login">
+    <div class="card">
+      <div class="admin-login">
+        <div class="ico">🔐</div>
+        <h3>Admin Access</h3>
+        <p>Electoral Committee only</p>
+      </div>
+      <div class="field">
+        <label>Admin Password</label>
+        <input type="password" id="admin-pw" placeholder="Enter admin password" onkeydown="if(event.key==='Enter')checkPw()"/>
+      </div>
+      <div class="err" id="err-pw">⚠ Incorrect password.</div>
+      <button class="btn btn-yellow" onclick="checkPw()">Enter Dashboard →</button>
+      <button class="btn btn-ghost" onclick="showScreen('s-form')">← Back</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════
+       SCREEN: ADMIN DASHBOARD
+  ═══════════════════════════════ -->
+  <div class="screen" id="s-admin">
+    <div class="card">
+      <div class="admin-bar">
+        <div>
+          <p style="font-size:10px;font-weight:900;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Electoral Committee</p>
+          <h2>Registrations</h2>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <button class="export-btn" onclick="exportCSV()">📥 Export CSV</button>
+          <button class="btn btn-ghost btn-sm" onclick="loadAdmin()">↻</button>
+          <button class="btn btn-ghost btn-sm" onclick="showScreen('s-form')">✕</button>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-row">
+        <div class="stat"><div class="num" id="st-total">0</div><div class="lbl">Total</div></div>
+        <div class="stat"><div class="num" id="st-200" style="color:var(--y);">0</div><div class="lbl">200 Level</div></div>
+        <div class="stat"><div class="num" id="st-300">0</div><div class="lbl">300 Level</div></div>
+      </div>
+
+      <!-- Search -->
+      <div class="search-wrap">
+        <span class="si">🔍</span>
+        <input type="text" id="searchInput" placeholder="Search by name, reg number or department..." oninput="filterTable()"/>
+      </div>
+
+      <!-- Table -->
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Full Name</th>
+              <th>Reg Number</th>
+              <th>Email</th>
+              <th>Level</th>
+              <th>Time</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="regTbody">
+            <tr><td colspan="8" style="text-align:center;color:var(--muted);padding:24px;">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p style="font-size:12px;color:var(--muted);font-weight:700;margin-top:14px;">
+        💡 Click <strong style="color:var(--y)">Export CSV</strong> to download all registrations and upload to the Voting App!
+      </p>
+    </div>
+  </div>
+
+</div><!-- /wrap -->
+
+<script>
+const ADMIN_PW = 'FOSSANEC12#';
+let allRegistrations = [];
+
+// ─── REGISTRATION WINDOW ─────────────────────
+// Opens: 10th March 2026 8:00 AM
+// Closes: 15th March 2026 8:00 PM
+const REG_OPEN  = new Date('2026-03-11T09:00:00').getTime();
+const REG_CLOSE = new Date('2026-03-15T22:00:00').getTime();
+
+function checkRegistrationWindow() {
+  const now = Date.now();
+  if (now < REG_OPEN) {
+    // Not open yet — show countdown to opening
+    showScreen('s-notopen');
+    startCountdown('pre-d','pre-h','pre-m','pre-s', REG_OPEN);
+  } else if (now > REG_CLOSE) {
+    // Closed
+    showScreen('s-closed');
+  } else {
+    // Open!
+    showScreen('s-form');
+  }
+}
+
+function startCountdown(dId, hId, mId, sId, target) {
+  function tick() {
+    const diff = target - Date.now();
+    if (diff <= 0) { checkRegistrationWindow(); return; }
+    const d = Math.floor(diff / 86400000);
+    const h = Math.floor((diff % 86400000) / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    const pad = n => String(n).padStart(2,'0');
+    document.getElementById(dId).textContent = pad(d);
+    document.getElementById(hId).textContent = pad(h);
+    document.getElementById(mId).textContent = pad(m);
+    document.getElementById(sId).textContent = pad(s);
+  }
+  tick();
+  setInterval(tick, 1000);
+}
+
+// ─── BOOT ────────────────────────────────────
+window.bootApp = function() {
+  checkRegistrationWindow();
+  loadCounter();
+};
+
+// ─── SCREEN ──────────────────────────────────
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('on'));
+  document.getElementById(id).classList.add('on');
+  window.scrollTo({top: 0, behavior: 'smooth'});
+}
+
+function loading(txt = 'Please wait...') {
+  document.getElementById('overlayTxt').textContent = txt;
+  document.getElementById('overlay').style.display = 'flex';
+}
+function done() { document.getElementById('overlay').style.display = 'none'; }
+
+// ─── LIVE COUNTER ─────────────────────────────
+async function loadCounter() {
+  if (!window._db) return;
+  try {
+    const { collection, getDocs } = window._fs;
+    const snap = await getDocs(collection(window._db, 'registeredVoters'));
+    const count = snap.size;
+    if (count > 0) {
+      document.getElementById('counterNum').textContent = count;
+      document.getElementById('regCounter').style.display = 'flex';
+    }
+  } catch(e) {}
+}
+
+// ─── SUBMIT REGISTRATION ──────────────────────
+window.submitRegistration = async function() {
+  const name  = document.getElementById('f-name').value.trim();
+  const email = document.getElementById('f-email').value.trim().toLowerCase();
+  const reg   = document.getElementById('f-reg').value.trim();
+  const level = document.getElementById('f-level').value;
+  const errEl = document.getElementById('err-form');
+
+  if (!name || !email || !reg || !level) {
+    errEl.textContent = '⚠ Please fill in all fields.';
+    errEl.style.display = 'block'; return;
+  }
+  if (!email.includes('@')) {
+    errEl.textContent = '⚠ Please enter a valid email address.';
+    errEl.style.display = 'block'; return;
+  }
+  errEl.style.display = 'none';
+
+  loading('Submitting your registration...');
+
+  try {
+    const { doc, setDoc, getDoc, serverTimestamp } = window._fs;
+    const db = window._db;
+    const safeReg = reg.replace(/\//g, '-').replace(/\s/g, '_');
+
+    // Check if already registered
+    const existing = await getDoc(doc(db, 'registeredVoters', safeReg));
+    if (existing.exists()) {
+      done();
+      document.getElementById('dup-reg').textContent = reg;
+      showScreen('s-already');
+      return;
+    }
+
+    // Generate registration code
+    const code = 'REG-' + Math.random().toString(36).substring(2, 5).toUpperCase() + '-' + Date.now().toString().slice(-4);
+
+    // Save to Firebase
+    await setDoc(doc(db, 'registeredVoters', safeReg), {
+      name, email, regNumber: reg,
+      level, voted: false,
+      registrationCode: code,
+      registeredAt: serverTimestamp()
+    });
+
+    done();
+
+    // Show success
+    document.getElementById('suc-name').textContent = name;
+    document.getElementById('suc-email').textContent = email;
+    document.getElementById('suc-reg').textContent = reg;
+    document.getElementById('suc-level').textContent = level;
+    document.getElementById('suc-code').textContent = code;
+
+    // Clear form
+    ['f-name','f-email','f-reg'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('f-level').value = '';
+
+    // Update counter
+    loadCounter();
+    showScreen('s-success');
+
+  } catch(e) {
+    done();
+    document.getElementById('err-form').textContent = '⚠ Error submitting. Check your internet and try again.';
+    document.getElementById('err-form').style.display = 'block';
+    console.error(e);
+  }
+};
+
+// ─── ADMIN ────────────────────────────────────
+function showAdminLogin() { showScreen('s-admin-login'); }
+
+window.checkPw = function() {
+  const pw = document.getElementById('admin-pw').value;
+  if (pw !== ADMIN_PW) {
+    document.getElementById('err-pw').style.display = 'block'; return;
+  }
+  document.getElementById('err-pw').style.display = 'none';
+  document.getElementById('admin-pw').value = '';
+  showScreen('s-admin');
+  loadAdmin();
+};
+
+window.loadAdmin = async function() {
+  if (!window._db) return;
+  loading('Loading registrations...');
+  try {
+    const { collection, getDocs } = window._fs;
+    const snap = await getDocs(collection(window._db, 'registeredVoters'));
+    allRegistrations = [];
+    snap.forEach(d => allRegistrations.push({ id: d.id, ...d.data() }));
+
+    // Sort by time
+    allRegistrations.sort((a, b) => (b.registeredAt?.seconds || 0) - (a.registeredAt?.seconds || 0));
+
+    // Stats
+    const l200 = allRegistrations.filter(r => r.level === '200L').length;
+    const l300 = allRegistrations.filter(r => r.level === '300L').length;
+    document.getElementById('st-total').textContent = allRegistrations.length;
+    document.getElementById('st-200').textContent = l200;
+    document.getElementById('st-300').textContent = l300;
+
+    renderTable(allRegistrations);
+    done();
+  } catch(e) { done(); console.error(e); }
+};
+
+function renderTable(list) {
+  const tb = document.getElementById('regTbody');
+  if (!list.length) {
+    tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:24px;">No registrations yet.</td></tr>';
+    return;
+  }
+  tb.innerHTML = list.map((r, i) => {
+    const time = r.registeredAt?.seconds
+      ? new Date(r.registeredAt.seconds * 1000).toLocaleString('en-NG', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'})
+      : '—';
+    const levelBadge = r.level === '200L'
+      ? `<span class="badge badge-yellow">200L</span>`
+      : `<span class="badge badge-green">300L</span>`;
+    return `<tr>
+      <td style="color:var(--muted);">${i + 1}</td>
+      <td style="font-weight:800;">${r.name || '—'}</td>
+      <td style="color:var(--y);font-size:12px;">${r.regNumber || '—'}</td>
+      <td style="color:var(--muted);font-size:12px;">${r.email || '—'}</td>
+      <td>${levelBadge}</td>
+      <td style="color:var(--muted);font-size:11px;">${time}</td>
+      <td><button class="del-btn" onclick="deleteReg('${r.id}','${r.name}')">✕</button></td>
+    </tr>`;
+  }).join('');
+}
+
+// ─── SEARCH ───────────────────────────────────
+window.filterTable = function() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  const filtered = allRegistrations.filter(r =>
+    (r.name || '').toLowerCase().includes(q) ||
+    (r.regNumber || '').toLowerCase().includes(q) ||
+    (r.department || '').toLowerCase().includes(q) ||
+    (r.level || '').toLowerCase().includes(q)
+  );
+  renderTable(filtered);
+};
+
+// ─── DELETE ───────────────────────────────────
+window.deleteReg = async function(id, name) {
+  if (!confirm(`Remove ${name} from registrations?`)) return;
+  loading('Removing...');
+  try {
+    const { doc, deleteDoc } = window._fs;
+    await deleteDoc(doc(window._db, 'registeredVoters', id));
+    done();
+    loadAdmin();
+  } catch(e) { done(); alert('Error: ' + e.message); }
+};
+
+// ─── EXPORT CSV ───────────────────────────────
+window.exportCSV = function() {
+  if (!allRegistrations.length) { alert('No registrations to export!'); return; }
+  const headers = ['Full Name', 'Email', 'Reg Number', 'Level'];
+  const rows = allRegistrations.map(r => [
+    `"${r.name || ''}"`,
+    `"${r.email || ''}"`,
+    `"${r.regNumber || ''}"`,
+    `"${r.level || ''}"`
+  ].join(','));
+  const csv = [headers.join(','), ...rows].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'FOSSAN_Voters_' + new Date().toLocaleDateString('en-NG').replace(/\//g, '-') + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+};
+</script>
+</body>
+</html>
